@@ -58,3 +58,16 @@ Run the callout regression tests with Node 22.6+:
 ```sh
 node --experimental-strip-types --test tests/flight.test.mjs
 ```
+
+## Scenery and aircraft finish
+
+The scene now has instanced woodland and towns with roads and roofs, textured
+fields and a river, with three repeating terrain sections. Soft, layered cloud
+billboards move relative to the aircraft and sit at an altitude-dependent height.
+Aircraft materials add procedural camouflage, visible aileron hinge lines,
+canopy framing, navigation lights and propeller blur. The fin now sweeps aft.
+
+All textures are generated locally, with no remote asset requests. Trees and
+buildings use instanced geometry and cloud sprites disable depth writes to
+reduce rendering cost. This is procedural scenery, not photogrammetry or a
+volumetric weather simulation. Desktop frame rate still needs browser profiling.
