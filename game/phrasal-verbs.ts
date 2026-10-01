@@ -8,6 +8,23 @@ const phrasalVerb = (
   hint: string,
 ): Question => ({ id, sentence, answers, level, hint });
 
+const musicPhrasalVerb = (
+  id: string,
+  sentence: string,
+  answers: string[],
+  level: Level,
+  hint: string,
+  artist: string,
+  song: string,
+): Question => ({
+  id,
+  sentence,
+  answers,
+  level,
+  hint,
+  source: { artist, song },
+});
+
 export const PHRASAL_VERB_QUESTIONS: Question[] = [
   phrasalVerb("pv-a1-1", "I ___ at seven every morning.", ["wake up"], "A1", "stop sleeping"),
   phrasalVerb("pv-a1-2", "Please ___; breakfast is ready.", ["get up"], "A1", "leave your bed"),
@@ -29,6 +46,12 @@ export const PHRASAL_VERB_QUESTIONS: Question[] = [
   phrasalVerb("pv-a1-18", "I am busy now, but I will ___ later.", ["call back", "phone back"], "A1", "telephone again"),
   phrasalVerb("pv-a1-19", "Can I ___ this shirt before buying it?", ["try on"], "A1", "test some clothing"),
   phrasalVerb("pv-a1-20", "Please ___; you are walking too fast.", ["slow down"], "A1", "reduce speed"),
+  musicPhrasalVerb("pv-a1-music-1", "Please ___ before the alarm rings again.", ["wake up"], "A1", "stop sleeping", "Avicii", "Wake Me Up"),
+  musicPhrasalVerb("pv-a1-music-2", "Remember to ___ the laptop before bed.", ["shut down", "switch off", "turn off"], "A1", "stop a device", "BLACKPINK", "Shut Down"),
+  musicPhrasalVerb("pv-a1-music-3", "We should ___ home before it gets dark.", ["get back", "go back"], "A1", "return", "The Beatles", "Get Back"),
+  musicPhrasalVerb("pv-a1-music-4", "Let's ___ some music while we cook.", ["put on"], "A1", "start playing", "Corinne Bailey Rae", "Put Your Records On"),
+  musicPhrasalVerb("pv-a1-music-5", "Please ___; I cannot walk that quickly.", ["slow down"], "A1", "reduce speed", "Selena Gomez", "Slow Down"),
+  musicPhrasalVerb("pv-a1-music-6", "It was only a small mistake, so try to ___ .", ["shake it off"], "A1", "stop worrying about it", "Taylor Swift", "Shake It Off"),
 
   phrasalVerb("pv-a2-1", "Could you ___ my cat while I am away?", ["look after", "take care of"], "A2", "care for"),
   phrasalVerb("pv-a2-2", "We need to ___ the bus near the library.", ["get on"], "A2", "enter public transport"),
@@ -50,6 +73,12 @@ export const PHRASAL_VERB_QUESTIONS: Question[] = [
   phrasalVerb("pv-a2-18", "Please ___ with your story; I am listening.", ["carry on", "go on"], "A2", "continue"),
   phrasalVerb("pv-a2-19", "Take a breath and try to ___ .", ["calm down"], "A2", "become relaxed"),
   phrasalVerb("pv-a2-20", "I need to ___ what time the shop closes.", ["find out"], "A2", "discover information"),
+  musicPhrasalVerb("pv-a2-music-1", "She wants to travel more when she ___ .", ["grows up"], "A2", "becomes an adult", "Paramore", "Grow Up"),
+  musicPhrasalVerb("pv-a2-music-2", "Could you ___ my plants while I am away?", ["look after", "take care of"], "A2", "care for", "The Fray", "Look After You"),
+  musicPhrasalVerb("pv-a2-music-3", "Even when the task feels difficult, we must ___ .", ["carry on", "go on"], "A2", "continue", "fun.", "Carry On"),
+  musicPhrasalVerb("pv-a2-music-4", "You should ___ that new café this weekend.", ["check out"], "A2", "visit or investigate", "will.i.am & Nicki Minaj", "Check It Out"),
+  musicPhrasalVerb("pv-a2-music-5", "They decided to ___ after another argument.", ["break up", "split up"], "A2", "end a relationship", "Dua Lipa", "Break My Heart"),
+  musicPhrasalVerb("pv-a2-music-6", "Why don't you ___ after work?", ["come over", "come round"], "A2", "visit my home", "Rudimental feat. Anne-Marie and Tion Wayne", "Come Over"),
 
   phrasalVerb("pv-b1-1", "Please do not ___ that old argument again.", ["bring up"], "B1", "mention a topic"),
   phrasalVerb("pv-b1-2", "They had to ___ the picnic because of the rain.", ["call off"], "B1", "cancel"),
@@ -71,6 +100,12 @@ export const PHRASAL_VERB_QUESTIONS: Question[] = [
   phrasalVerb("pv-b1-18", "He tried to ___ an excuse for being late.", ["make up"], "B1", "invent"),
   phrasalVerb("pv-b1-19", "I promised to help, and I do not want to ___ her.", ["let down"], "B1", "disappoint"),
   phrasalVerb("pv-b1-20", "A new manager will ___ the team next month.", ["take over"], "B1", "assume control"),
+  musicPhrasalVerb("pv-b1-music-1", "Even after two failed attempts, she refused to ___ .", ["give up"], "B1", "stop trying", "Linkin Park", "Given Up"),
+  musicPhrasalVerb("pv-b1-music-2", "We need to ___ how this machine works.", ["figure out", "work out"], "B1", "understand", "Royal Blood", "Figure It Out"),
+  musicPhrasalVerb("pv-b1-music-3", "Try not to ___ with regret; focus on today.", ["look back"], "B1", "think about the past", "Oasis", "Don't Look Back in Anger"),
+  musicPhrasalVerb("pv-b1-music-4", "I am relying on you, so please do not ___ .", ["let me down"], "B1", "disappoint me", "The Chainsmokers", "Don't Let Me Down"),
+  musicPhrasalVerb("pv-b1-music-5", "The file was corrupted, so I had to ___ .", ["start over", "start again"], "B1", "begin again", "Miley Cyrus", "Start All Over"),
+  musicPhrasalVerb("pv-b1-music-6", "Take a breath and ___ before the interview.", ["calm down"], "B1", "become relaxed", "Rema", "Calm Down"),
 
   phrasalVerb("pv-b2-1", "The new policy could ___ major changes in the workplace.", ["bring about"], "B2", "cause to happen"),
   phrasalVerb("pv-b2-2", "We need to ___ a more creative solution.", ["come up with"], "B2", "produce an idea"),
@@ -92,6 +127,12 @@ export const PHRASAL_VERB_QUESTIONS: Question[] = [
   phrasalVerb("pv-b2-18", "The team managed to ___ the difficult event successfully.", ["pull off"], "B2", "achieve something difficult"),
   phrasalVerb("pv-b2-19", "The director decided to ___ after ten years.", ["step down"], "B2", "leave a senior role"),
   phrasalVerb("pv-b2-20", "The council promised to ___ illegal dumping.", ["crack down on"], "B2", "take strict action against"),
+  musicPhrasalVerb("pv-b2-music-1", "She agreed to ___ more responsibility at work.", ["take on"], "B2", "accept responsibility", "a-ha", "Take On Me"),
+  musicPhrasalVerb("pv-b2-music-2", "He decided to ___ the offer because the hours were unsuitable.", ["turn down"], "B2", "refuse", "DJ Snake & Lil Jon", "Turn Down for What"),
+  musicPhrasalVerb("pv-b2-music-3", "Please ___ him; it is his first day.", ["go easy on"], "B2", "treat less severely", "Adele", "Easy on Me"),
+  musicPhrasalVerb("pv-b2-music-4", "I am trying to ___ late-night snacks.", ["cut down on"], "B2", "consume less", "Ed Sheeran", "Bad Habits"),
+  musicPhrasalVerb("pv-b2-music-5", "The sequel struggled to ___ everyone's expectations.", ["live up to"], "B2", "meet expectations", "Imagine Dragons", "Whatever It Takes"),
+  musicPhrasalVerb("pv-b2-music-6", "The dancers managed to ___ a difficult routine live.", ["pull off"], "B2", "achieve something difficult", "Beyoncé", "Run the World (Girls)"),
 
   phrasalVerb("pv-c1-1", "The disagreement seems to ___ a lack of trust.", ["boil down to"], "C1", "have as the essential cause"),
   phrasalVerb("pv-c1-2", "The small bakery hopes to ___ catering next year.", ["branch out into"], "C1", "expand into a new area"),
@@ -113,4 +154,10 @@ export const PHRASAL_VERB_QUESTIONS: Question[] = [
   phrasalVerb("pv-c1-18", "She finally decided to ___ the problem directly.", ["square up to"], "C1", "face a difficult situation"),
   phrasalVerb("pv-c1-19", "We should ___ the advantages and disadvantages first.", ["weigh up"], "C1", "consider carefully"),
   phrasalVerb("pv-c1-20", "The discussion began to ___ the real cause of the delay.", ["zero in on"], "C1", "focus precisely on"),
+  musicPhrasalVerb("pv-c1-music-1", "The disagreement really ___ a lack of trust.", ["boils down to"], "C1", "has as its essential cause", "Queen", "Under Pressure"),
+  musicPhrasalVerb("pv-c1-music-2", "The interview helped to ___ the reasoning behind her decision.", ["flesh out"], "C1", "add more detail to", "Billie Eilish", "Therefore I Am"),
+  musicPhrasalVerb("pv-c1-music-3", "The inquiry was created to ___ corruption in the industry.", ["root out"], "C1", "find and remove completely", "Florence + the Machine", "Shake It Out"),
+  musicPhrasalVerb("pv-c1-music-4", "The documentary ___ the role of social pressure.", ["zeroes in on", "zeros in on"], "C1", "focuses precisely on", "Hozier", "Take Me to Church"),
+  musicPhrasalVerb("pv-c1-music-5", "The article unfairly ___ one player for blame.", ["singled out"], "C1", "selected one person", "ABBA", "The Winner Takes It All"),
+  musicPhrasalVerb("pv-c1-music-6", "The guide ___ exactly what visitors should expect.", ["spells out"], "C1", "explains explicitly", "Harry Styles", "Sign of the Times"),
 ];
