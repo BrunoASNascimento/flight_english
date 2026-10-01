@@ -2,13 +2,41 @@
 import { Sky } from "@react-three/drei";
 import { Canvas, useFrame } from "@react-three/fiber";
 import { useMemo, useRef } from "react";
-import { Shape, Group, Vector2 } from "three";
+import { Shape, Group, Vector2, MeshStandardMaterial } from "three";
+import Scenery from "./Scenery";
 
 type Props = {
   pitch: number;
   altitude: number;
   status: string;
   emergency?: boolean;
+};
+// Local-space paint keeps camouflage attached to each aircraft surface.
+const paint: NonNullable<MeshStandardMaterial["onBeforeCompile"]> = (
+  shader,
+) => {
+  shader.vertexShader = shader.vertexShader
+    .replace(
+      "#include <common>",
+      "#include <common>\nvarying vec3 paintPosition;",
+    )
+    .replace(
+      "#include <begin_vertex>",
+      "#include <begin_vertex>\npaintPosition = position;",
+    );
+  shader.fragmentShader = shader.fragmentShader
+    .replace(
+      "#include <common>",
+      "#include <common>\nvarying vec3 paintPosition;",
+    )
+    .replace(
+      "#include <color_fragment>",
+      `#include <color_fragment>
+ float pattern = sin(paintPosition.x*2.3 + sin(paintPosition.y*1.6)*2.0) + cos(paintPosition.z*1.8+paintPosition.x);
+ vec3 camouflage = mix(vec3(.24,.29,.22), vec3(.43,.46,.43), smoothstep(-.1,.15,pattern));
+ diffuseColor.rgb = camouflage;
+ `,
+    );
 };
 // Coordinates in metres: nose -Z, tail +Z, span along X.
 function Surface({
@@ -43,7 +71,11 @@ function Surface({
           },
         ]}
       />
-      <meshStandardMaterial color={color} roughness={0.78} />
+      <meshStandardMaterial
+        color={color}
+        roughness={0.78}
+        onBeforeCompile={paint}
+      />
     </mesh>
   );
 }
@@ -65,14 +97,19 @@ function Body({
   return (
     <mesh position={position} rotation={[Math.PI / 2, 0, 0]} scale={scale}>
       <latheGeometry args={[points, 48]} />
-      <meshStandardMaterial color={color} roughness={0.65} metalness={0.12} />
+      <meshStandardMaterial
+        color={color}
+        roughness={0.72}
+        metalness={0.04}
+        onBeforeCompile={color === "#a8ada6" ? undefined : paint}
+      />
     </mesh>
   );
 }
-function Propeller({ x }: { x: number }) {
+function Propeller({ x, status }: { x: number; status: string }) {
   const ref = useRef<Group>(null);
   useFrame((_, dt) => {
-    if (ref.current) ref.current.rotation.z += dt * 45;
+    if (ref.current && status === "flying") ref.current.rotation.z += dt * 45;
   });
   return (
     <group position={[x, 0, -3.35]}>
@@ -84,6 +121,16 @@ function Propeller({ x }: { x: number }) {
         ]}
         color="#a8ada6"
       />
+      <mesh rotation={[0, 0, 0]}>
+        <circleGeometry args={[1.64, 64]} />
+        <meshBasicMaterial
+          color="#b2b7ac"
+          transparent
+          opacity={0.12}
+          depthWrite={false}
+          side={2}
+        />
+      </mesh>
       <group ref={ref}>
         {[0, 1, 2].map((i) => (
           <group key={i} rotation={[0, 0, (i * Math.PI * 2) / 3]}>
@@ -101,10 +148,10 @@ function Propeller({ x }: { x: number }) {
     </group>
   );
 }
-function Aircraft({ pitch, emergency }: Props) {
+function Aircraft({ pitch, emergency, status }: Props) {
   const ref = useRef<Group>(null);
   useFrame(({ clock }, dt) => {
-    if (ref.current) {
+    if (ref.current && status !== "paused") {
       ref.current.rotation.x +=
         (pitch - ref.current.rotation.x) * Math.min(1, dt * 3);
       ref.current.rotation.z =
@@ -115,6 +162,29 @@ function Aircraft({ pitch, emergency }: Props) {
   });
   return (
     <group ref={ref}>
+      {[-1, 1].map((side) => (
+        <group key={side}>
+          <mesh
+            position={[side * 5.6, 0.155, 0.64]}
+            rotation={[0, side * 0.08, 0]}
+          >
+            <boxGeometry args={[3.3, 0.012, 0.022]} />
+            <meshStandardMaterial color="#2e382e" />
+          </mesh>
+          <mesh position={[side * 8.06, 0.12, 0.05]}>
+            <sphereGeometry args={[0.06, 12, 8]} />
+            <meshStandardMaterial
+              color={side < 0 ? "#e43a28" : "#55d58a"}
+              emissive={side < 0 ? "#b91808" : "#19ad59"}
+              emissiveIntensity={2}
+            />
+          </mesh>
+        </group>
+      ))}
+      <mesh position={[0, 1.23, -3.1]}>
+        <boxGeometry args={[0.035, 0.035, 1.5]} />
+        <meshStandardMaterial color="#424e43" />
+      </mesh>
       <Body
         profile={[
           [0, -6.1],
@@ -191,7 +261,7 @@ function Aircraft({ pitch, emergency }: Props) {
             color="#596957"
             scale={[1, 1, 1.12]}
           />
-          <Propeller x={x} />
+          <Propeller x={x} status={status} />
           <mesh position={[x, -0.61, -2.4]} scale={[0.3, 0.15, 0.6]}>
             <boxGeometry />
             <meshStandardMaterial color="#242b28" />
@@ -224,7 +294,7 @@ function Aircraft({ pitch, emergency }: Props) {
       />
       <Surface
         position={[0, 0.1, 4.1]}
-        rotation={[0, Math.PI / 2, 0]}
+        rotation={[0, -Math.PI / 2, 0]}
         points={[
           [0, 0],
           [0.35, 1.9],
@@ -250,33 +320,6 @@ function Aircraft({ pitch, emergency }: Props) {
     </group>
   );
 }
-function Landscape({ altitude, status }: Props) {
-  const ref = useRef<Group>(null);
-  useFrame((_, dt) => {
-    if (ref.current && status === "flying")
-      ref.current.position.z = (ref.current.position.z + dt * 12) % 30;
-  });
-  return (
-    <group ref={ref} position={[0, -12 - altitude / 900, 0]}>
-      {Array.from({ length: 144 }, (_, i) => (
-        <mesh
-          key={i}
-          position={[
-            ((i % 12) - 6) * 30,
-            -(i % 3) * 0.05,
-            -Math.floor(i / 12) * 30 + 40,
-          ]}
-          rotation={[-Math.PI / 2, 0, 0]}
-        >
-          <planeGeometry args={[29.8, 29.8]} />
-          <meshStandardMaterial
-            color={["#657344", "#87935e", "#a09a69", "#4e663e"][i % 4]}
-          />
-        </mesh>
-      ))}
-    </group>
-  );
-}
 export default function FlightScene(props: Props) {
   return (
     <Canvas
@@ -285,11 +328,12 @@ export default function FlightScene(props: Props) {
       onCreated={({ camera }) => camera.lookAt(0, 0, -3)}
     >
       <Sky sunPosition={[30, 18, -50]} turbidity={5} />
-      <ambientLight intensity={1.4} />
+      <ambientLight intensity={0.8} />
+      <hemisphereLight args={["#c7e3f2", "#4e5036", 1.2]} />
       <directionalLight position={[-20, 30, -10]} intensity={2.5} />
       <Aircraft {...props} />
-      <Landscape {...props} />
-      <fog attach="fog" args={["#9dbece", 85, 320]} />
+      <Scenery altitude={props.altitude} status={props.status} />
+      <fog attach="fog" args={["#b0c4cf", 130, 780]} />
     </Canvas>
   );
 }
