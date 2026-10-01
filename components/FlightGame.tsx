@@ -2,7 +2,7 @@
 import dynamic from "next/dynamic";
 import { FormEvent, useEffect, useRef, useState } from "react";
 import { pickQuestion, levelForStreak } from "@/game/questions";
-import { normaliseAnswer, climbForAnswer } from "@/game/rules";
+import { isAcceptedAnswer, climbForAnswer } from "@/game/rules";
 import { crossedAltitudes, INCIDENTS, type Incident } from "@/game/flight";
 const FlightScene = dynamic(() => import("./FlightScene"), { ssr: false });
 const labels: Record<number, string> = {
@@ -163,9 +163,7 @@ export default function FlightGame() {
     e.preventDefault();
     const s = live.current;
     if (s.status !== "flying" || !answer.trim()) return;
-    const accepted = s.question.answers.some(
-      (a) => normaliseAnswer(a) === normaliseAnswer(answer),
-    );
+    const accepted = isAcceptedAnswer(answer, s.question.answers);
     const n = { ...s, attempts: s.attempts + 1, time: 10 };
     if (accepted) {
       n.correct++;
