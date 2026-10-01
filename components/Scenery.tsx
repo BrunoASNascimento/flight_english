@@ -65,86 +65,216 @@ function cloudTexture() {
 function Settlement() {
   const buildings = useRef<InstancedMesh>(null);
   const roofs = useRef<InstancedMesh>(null);
-  const trees = useRef<InstancedMesh>(null);
-  const trunks = useRef<InstancedMesh>(null);
+  const windows = useRef<InstancedMesh>(null);
+  const deciduousLower = useRef<InstancedMesh>(null);
+  const deciduousUpper = useRef<InstancedMesh>(null);
+  const conifers = useRef<InstancedMesh>(null);
+  const deciduousTrunks = useRef<InstancedMesh>(null);
+  const coniferTrunks = useRef<InstancedMesh>(null);
+  const cars = useRef<InstancedMesh>(null);
   useLayoutEffect(() => {
     const dummy = new Object3D(),
       rand = random(84),
       colour = new Color();
-    for (let i = 0; i < 320; i++) {
-      const row = Math.floor(i / 20),
-        col = i % 20,
-        x = -110 + col * 6,
-        z = -60 + row * 7;
-      const height = 2 + rand() * 9;
-      dummy.position.set(x, height / 2, z);
-      dummy.scale.set(3 + rand() * 1.5, height, 4);
-      dummy.rotation.set(0, 0, 0);
-      dummy.updateMatrix();
-      buildings.current!.setMatrixAt(i, dummy.matrix);
-      buildings.current!.setColorAt(
-        i,
-        colour.set(["#bbb7a8", "#c3bdab", "#a8a99e", "#c5c3b6"][i % 4]),
-      );
-      dummy.position.y = height + 0.65;
-      dummy.scale.set(3.3, 1.3, 4.4);
-      dummy.updateMatrix();
-      roofs.current!.setMatrixAt(i, dummy.matrix);
+    let buildingIndex = 0;
+    for (let row = 0; row < 18; row++) {
+      for (let col = 0; col < 18; col++) {
+        if (row % 5 === 0 || col % 5 === 0) continue;
+        const x = -122 + col * 7.5 + (rand() - 0.5) * 0.9;
+        const z = -65 + row * 7.5 + (rand() - 0.5) * 0.9;
+        const width = 3.6 + rand() * 1.8;
+        const depth = 3.8 + rand() * 1.6;
+        const centreBonus = Math.max(0, 1 - Math.abs(x + 57) / 70);
+        const height = 3 + rand() * 8 + centreBonus * rand() * 10;
+        const i = buildingIndex++;
+
+        dummy.position.set(x, height / 2, z);
+        dummy.scale.set(width, height, depth);
+        dummy.rotation.set(0, 0, 0);
+        dummy.updateMatrix();
+        buildings.current!.setMatrixAt(i, dummy.matrix);
+        buildings.current!.setColorAt(
+          i,
+          colour.set(
+            ["#b9b4a4", "#cbc3ad", "#aaa99e", "#c5b9a6", "#918e85"][
+              i % 5
+            ],
+          ),
+        );
+
+        dummy.position.set(x, height + 0.75, z);
+        dummy.scale.set(width * 0.8, 1.5, depth * 0.8);
+        dummy.rotation.set(0, Math.PI / 4, 0);
+        dummy.updateMatrix();
+        roofs.current!.setMatrixAt(i, dummy.matrix);
+        roofs.current!.setColorAt(
+          i,
+          colour.set(["#654c43", "#73594d", "#5b5350", "#78655a"][i % 4]),
+        );
+
+        for (let face = 0; face < 2; face++) {
+          const windowIndex = i * 2 + face;
+          dummy.position.set(
+            face === 0 ? x : x + width / 2 + 0.025,
+            Math.max(1.5, height * 0.55),
+            face === 0 ? z - depth / 2 - 0.025 : z,
+          );
+          dummy.scale.set(
+            face === 0 ? width * 0.6 : 0.035,
+            Math.max(0.5, height * 0.1),
+            face === 0 ? 0.035 : depth * 0.6,
+          );
+          dummy.rotation.set(0, 0, 0);
+          dummy.updateMatrix();
+          windows.current!.setMatrixAt(windowIndex, dummy.matrix);
+        }
+      }
     }
-    for (let i = 0; i < 1500; i++) {
-      // Woodland beyond the town; separate groves leave fields visible.
-      const x = -270 + rand() * 540,
+
+    const placeTree = (i: number, conifer: boolean) => {
+      let x = 0;
+      let z = 0;
+      do {
+        x = -270 + rand() * 540;
         z = -290 + rand() * 580;
-      const town = x > -120 && x < 20 && z > -75 && z < 65;
-      const river = x > 110 && x < 170;
-      const h = town || river ? 0.001 : 3 + rand() * 7;
-      dummy.position.set(x, h * 0.65, z);
-      dummy.scale.set(h * 0.35, h * 0.65, h * 0.35);
+      } while (
+        (x > -132 && x < 18 && z > -76 && z < 76) ||
+        (x > 105 && x < 175)
+      );
+      const h = conifer ? 5 + rand() * 8 : 4 + rand() * 7;
+      const trunk = conifer ? coniferTrunks.current! : deciduousTrunks.current!;
+      dummy.position.set(x, h * 0.22, z);
+      dummy.scale.set(h * 0.045, h * 0.44, h * 0.045);
       dummy.rotation.set(0, rand() * Math.PI, 0);
       dummy.updateMatrix();
-      trees.current!.setMatrixAt(i, dummy.matrix);
-      trees.current!.setColorAt(
-        i,
-        colour.set(["#344d30", "#49613a", "#547143", "#3c5938"][i % 4]),
-      );
-      dummy.position.y = h * 0.2;
-      dummy.scale.set(h * 0.05, h * 0.4, h * 0.05);
+      trunk.setMatrixAt(i, dummy.matrix);
+
+      if (conifer) {
+        dummy.position.set(x, h * 0.67, z);
+        dummy.scale.set(h * 0.3, h * 0.76, h * 0.3);
+        dummy.updateMatrix();
+        conifers.current!.setMatrixAt(i, dummy.matrix);
+        conifers.current!.setColorAt(
+          i,
+          colour.set(["#24472f", "#31553a", "#3a6040"][i % 3]),
+        );
+      } else {
+        dummy.position.set(x, h * 0.63, z);
+        dummy.scale.set(h * (0.31 + rand() * 0.08), h * 0.38, h * 0.34);
+        dummy.updateMatrix();
+        deciduousLower.current!.setMatrixAt(i, dummy.matrix);
+        deciduousLower.current!.setColorAt(
+          i,
+          colour.set(["#365b35", "#456c3d", "#537947", "#2f5332"][i % 4]),
+        );
+        dummy.position.set(x + h * 0.08, h * 0.88, z - h * 0.04);
+        dummy.scale.set(h * 0.24, h * 0.28, h * 0.25);
+        dummy.updateMatrix();
+        deciduousUpper.current!.setMatrixAt(i, dummy.matrix);
+        deciduousUpper.current!.setColorAt(
+          i,
+          colour.set(["#416a3c", "#527a46", "#5f824d", "#385f38"][i % 4]),
+        );
+      }
+    };
+
+    for (let i = 0; i < 1050; i++) placeTree(i, false);
+    for (let i = 0; i < 420; i++) placeTree(i, true);
+
+    for (let i = 0; i < 72; i++) {
+      const road = i % 4;
+      const x = -122 + road * 37.5 + (i % 2 ? 1.65 : -1.65);
+      const z = -65 + (Math.floor(i / 4) % 18) * 7.5;
+      dummy.position.set(x, 0.28, z);
+      dummy.scale.set(0.8, 0.42, 1.6);
+      dummy.rotation.set(0, 0, 0);
       dummy.updateMatrix();
-      trunks.current!.setMatrixAt(i, dummy.matrix);
+      cars.current!.setMatrixAt(i, dummy.matrix);
+      cars.current!.setColorAt(
+        i,
+        colour.set(["#8b3030", "#334f66", "#d0c8b7", "#454545", "#8a8268"][i % 5]),
+      );
     }
-    for (const ref of [buildings, roofs, trees, trunks]) {
+
+    const refs = [
+      buildings,
+      roofs,
+      windows,
+      deciduousLower,
+      deciduousUpper,
+      conifers,
+      deciduousTrunks,
+      coniferTrunks,
+      cars,
+    ];
+    for (const ref of refs) {
       ref.current!.instanceMatrix.needsUpdate = true;
       ref.current!.computeBoundingSphere();
       if (ref.current!.instanceColor)
-        ref.current!.instanceColor!.needsUpdate = true;
+        ref.current!.instanceColor.needsUpdate = true;
     }
   }, []);
   return (
     <>
-      <instancedMesh ref={buildings} args={[undefined, undefined, 320]}>
+      <instancedMesh ref={buildings} args={[undefined, undefined, 196]}>
         <boxGeometry />
+        <meshStandardMaterial roughness={0.9} />
+      </instancedMesh>
+      <instancedMesh ref={roofs} args={[undefined, undefined, 196]}>
+        <coneGeometry args={[0.72, 1, 4]} />
         <meshStandardMaterial roughness={0.95} />
       </instancedMesh>
-      <instancedMesh ref={roofs} args={[undefined, undefined, 320]}>
-        <coneGeometry args={[0.72, 1, 4]} />
-        <meshStandardMaterial color="#67534c" roughness={1} />
+      <instancedMesh ref={windows} args={[undefined, undefined, 392]}>
+        <boxGeometry />
+        <meshStandardMaterial
+          color="#91abb0"
+          emissive="#293d42"
+          emissiveIntensity={0.45}
+          roughness={0.25}
+        />
       </instancedMesh>
-      <instancedMesh ref={trees} args={[undefined, undefined, 1500]}>
-        <icosahedronGeometry args={[1, 1]} />
+      <instancedMesh ref={deciduousLower} args={[undefined, undefined, 1050]}>
+        <dodecahedronGeometry args={[1, 0]} />
         <meshStandardMaterial roughness={1} />
       </instancedMesh>
-      <instancedMesh ref={trunks} args={[undefined, undefined, 1500]}>
-        <cylinderGeometry args={[1, 1, 1, 5]} />
-        <meshStandardMaterial color="#504432" />
+      <instancedMesh ref={deciduousUpper} args={[undefined, undefined, 1050]}>
+        <dodecahedronGeometry args={[1, 1]} />
+        <meshStandardMaterial roughness={1} />
       </instancedMesh>
-      {Array.from({ length: 17 }, (_, i) => (
+      <instancedMesh ref={conifers} args={[undefined, undefined, 420]}>
+        <coneGeometry args={[1, 1.7, 9, 3]} />
+        <meshStandardMaterial roughness={1} />
+      </instancedMesh>
+      <instancedMesh ref={deciduousTrunks} args={[undefined, undefined, 1050]}>
+        <cylinderGeometry args={[1, 1.25, 1, 7]} />
+        <meshStandardMaterial color="#57462f" roughness={1} />
+      </instancedMesh>
+      <instancedMesh ref={coniferTrunks} args={[undefined, undefined, 420]}>
+        <cylinderGeometry args={[1, 1.25, 1, 7]} />
+        <meshStandardMaterial color="#493c2d" roughness={1} />
+      </instancedMesh>
+      <instancedMesh ref={cars} args={[undefined, undefined, 72]}>
+        <boxGeometry />
+        <meshStandardMaterial roughness={0.35} metalness={0.25} />
+      </instancedMesh>
+      {Array.from({ length: 4 }, (_, i) => (
         <mesh
-          key={i}
+          key={`road-ns-${i}`}
           rotation={[-Math.PI / 2, 0, 0]}
-          position={[-52, 0.03, -64 + i * 7]}
+          position={[-122 + i * 37.5, 0.035, 0]}
         >
-          <planeGeometry args={[132, 1.7]} />
-          <meshStandardMaterial color="#65665d" />
+          <planeGeometry args={[4.5, 145]} />
+          <meshStandardMaterial color="#555957" roughness={1} />
+        </mesh>
+      ))}
+      {Array.from({ length: 4 }, (_, i) => (
+        <mesh
+          key={`road-ew-${i}`}
+          rotation={[-Math.PI / 2, 0, 0]}
+          position={[-58, 0.04, -65 + i * 37.5]}
+        >
+          <planeGeometry args={[150, 4.5]} />
+          <meshStandardMaterial color="#555957" roughness={1} />
         </mesh>
       ))}
     </>
