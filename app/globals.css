@@ -342,6 +342,64 @@ input {
   letter-spacing: 0.09em;
   opacity: 0.5;
 }
+.mode-menu {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin: 23px 0 18px;
+}
+.briefing .mode-option {
+  position: relative;
+  min-height: 112px;
+  padding: 17px 18px;
+  overflow: hidden;
+  text-align: left;
+  background: rgba(8, 17, 17, 0.82);
+  color: var(--cream);
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  transition:
+    border-color 0.2s ease,
+    background 0.2s ease,
+    transform 0.2s ease;
+}
+.briefing .mode-option:hover,
+.briefing .mode-option:focus-visible {
+  border-color: rgba(255, 177, 59, 0.72);
+  transform: translateY(-2px);
+  outline: none;
+}
+.briefing .mode-option.is-selected {
+  background: rgba(82, 57, 18, 0.82);
+  border-color: var(--amber);
+  box-shadow: inset 3px 0 0 var(--amber);
+}
+.mode-option > span {
+  position: absolute;
+  top: 12px;
+  right: 14px;
+  color: var(--amber);
+  font: 700 10px var(--font-display);
+  letter-spacing: 0.16em;
+}
+.mode-option strong,
+.mode-option small {
+  display: block;
+}
+.mode-option strong {
+  margin-bottom: 9px;
+  font: 600 19px var(--font-display);
+  letter-spacing: 0.08em;
+}
+.mode-option small {
+  max-width: 230px;
+  color: rgba(255, 255, 255, 0.64);
+  font-size: 11px;
+  line-height: 1.4;
+  letter-spacing: 0;
+}
+.briefing .launch-button {
+  min-width: 240px;
+}
 @media (max-width: 899px) {
   .topbar {
     height: 66px;
@@ -492,6 +550,25 @@ input {
     width: 100%;
     padding: 0 20px;
   }
+  .mode-menu {
+    gap: 8px;
+    margin: 17px 0 14px;
+  }
+  .briefing .mode-option {
+    min-height: 96px;
+    padding: 13px 12px;
+  }
+  .mode-option > span {
+    top: 9px;
+    right: 9px;
+  }
+  .mode-option strong {
+    padding-right: 20px;
+    font-size: 15px;
+  }
+  .mode-option small {
+    font-size: 9px;
+  }
 }
 @media (max-width: 899px) and (orientation: landscape) and (max-height: 560px) {
   .topbar {
@@ -548,6 +625,19 @@ input {
   }
   .aircraft-facts,
   .briefing > small {
+    display: none;
+  }
+  .mode-menu {
+    margin: 10px 0;
+  }
+  .briefing .mode-option {
+    min-height: 54px;
+    padding: 10px 12px;
+  }
+  .mode-option strong {
+    margin: 0;
+  }
+  .mode-option small {
     display: none;
   }
 }
