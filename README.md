@@ -35,3 +35,26 @@ npm run build
 ## Technology
 
 Next.js, React, TypeScript, React Three Fiber, Three.js and Web Audio.
+
+## Emergency flight update
+
+The aircraft geometry now uses tapered wings, a shaped fuselage, bomber glazing,
+framed canopy, extended nacelles, three-blade propellers and RAF wing roundels.
+This is an original procedural interpretation, not a scanned or certified model.
+
+Flights lose height continuously. Downdraft, engine power loss and wing icing
+start after 25 seconds, then recur 30 seconds after recovery. Two correct answers
+resolve an incident and award 1,000 ft. Wrong answers cause a smooth descent
+rather than an instant altitude jump. Terrain moves underneath the aircraft.
+
+Modern-style callouts announce One Thousand, Five Hundred, Four Hundred, Three
+Hundred and Two Hundred when descending through those heights. Below 200 ft,
+Terrain / Pull up repeats. These are browser speech synthesis, not recordings
+from an airliner; the voice depends on the installed browser/OS voices. Captions
+remain available when muted. Pause and automatic tab-hiding pause stop gameplay.
+
+Run the callout regression tests with Node 22.6+:
+
+```sh
+node --experimental-strip-types --test tests/flight.test.mjs
+```

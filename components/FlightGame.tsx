@@ -1,109 +1,353 @@
 "use client";
-
 import dynamic from "next/dynamic";
-import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { levelForStreak, pickQuestion, type Question } from "@/game/questions";
-import { climbForAnswer, normaliseAnswer, QUESTION_TIME_SECONDS, SERVICE_CEILING_FT, STARTING_ALTITUDE_FT, WRONG_ANSWER_PENALTY_FT } from "@/game/rules";
-
+import { FormEvent, useEffect, useRef, useState } from "react";
+import { pickQuestion, levelForStreak } from "@/game/questions";
+import { normaliseAnswer, climbForAnswer } from "@/game/rules";
+import { crossedAltitudes, INCIDENTS, type Incident } from "@/game/flight";
 const FlightScene = dynamic(() => import("./FlightScene"), { ssr: false });
-type GameStatus = "idle" | "flying" | "won" | "lost";
-type Feedback = { kind: "good" | "bad"; message: string } | null;
-
-function useEngineAudio(active: boolean, altitude: number) {
-  const audio = useRef<{ context: AudioContext; oscillators: OscillatorNode[] } | null>(null);
-  useEffect(() => {
-    if (!active || audio.current) return;
-    const context = new AudioContext();
-    const gain = context.createGain();
-    gain.gain.value = 0.045;
-    gain.connect(context.destination);
-    const oscillators = [72, 144, 38].map((frequency, index) => {
-      const oscillator = context.createOscillator();
-      oscillator.type = index === 0 ? "sawtooth" : "sine";
-      oscillator.frequency.value = frequency;
-      oscillator.connect(gain); oscillator.start(); return oscillator;
-    });
-    audio.current = { context, oscillators };
-    return () => { oscillators.forEach((oscillator) => oscillator.stop()); void context.close(); audio.current = null; };
-  }, [active]);
-  useEffect(() => {
-    const current = audio.current; if (!current) return;
-    const pressure = 1 + Math.min(altitude / SERVICE_CEILING_FT, 1) * 0.12;
-    current.oscillators[0].frequency.setTargetAtTime(72 * pressure, current.context.currentTime, 0.4);
-    current.oscillators[1].frequency.setTargetAtTime(144 * pressure, current.context.currentTime, 0.4);
-  }, [altitude]);
+const labels: Record<number, string> = {
+  1000: "One Thousand",
+  500: "Five Hundred",
+  400: "Four Hundred",
+  300: "Three Hundred",
+  200: "Two Hundred",
+};
+function initial() {
+  return {
+    status: "idle",
+    altitude: 5000,
+    target: 5000,
+    correct: 0,
+    attempts: 0,
+    streak: 0,
+    time: 10,
+    elapsed: 0,
+    nextEmergency: 25,
+    incident: null as Incident | null,
+    recovery: 0,
+    question: pickQuestion("A1"),
+    feedback: "",
+    pitch: 0,
+  };
 }
-
+type Flight = ReturnType<typeof initial>;
 export default function FlightGame() {
-  const [status, setStatus] = useState<GameStatus>("idle");
-  const [altitude, setAltitude] = useState(STARTING_ALTITUDE_FT);
-  const [correct, setCorrect] = useState(0); const [attempts, setAttempts] = useState(0); const [streak, setStreak] = useState(0);
-  const [timeLeft, setTimeLeft] = useState(QUESTION_TIME_SECONDS); const [answer, setAnswer] = useState("");
-  const [feedback, setFeedback] = useState<Feedback>(null); const [pitch, setPitch] = useState(0.04);
-  const [question, setQuestion] = useState<Question>(() => pickQuestion("A1"));
-  const inputRef = useRef<HTMLInputElement>(null); const level = levelForStreak(correct);
-  useEngineAudio(status === "flying", altitude);
-
-  const nextQuestion = useCallback((correctCount: number, previousId: string) => {
-    setQuestion(pickQuestion(levelForStreak(correctCount), previousId)); setTimeLeft(QUESTION_TIME_SECONDS); setAnswer("");
-    window.setTimeout(() => inputRef.current?.focus(), 30);
-  }, []);
-
-  const penalise = useCallback((message: string) => {
-    setAttempts((value) => value + 1); setStreak(0); setFeedback({ kind: "bad", message }); setPitch(-0.22);
-    setAltitude((current) => { const updated = Math.max(0, current - WRONG_ANSWER_PENALTY_FT); if (updated === 0) setStatus("lost"); return updated; });
-    window.setTimeout(() => setPitch(0.04), 900);
-  }, []);
-
+  const [state, setState] = useState<Flight>(initial);
+  const live = useRef(state);
+  const [answer, setAnswer] = useState("");
+  const [muted, setMuted] = useState(false);
+  const [caption, setCaption] = useState("");
+  const audio = useRef<AudioContext | null>(null);
+  const gain = useRef<GainNode | null>(null);
+  const input = useRef<HTMLInputElement>(null);
+  const muteRef = useRef(false);
+  const lastAlarm = useRef(0);
+  function publish(next: Flight) {
+    live.current = next;
+    setState(next);
+  }
+  function say(message: string) {
+    setCaption(message);
+    if (!muteRef.current && "speechSynthesis" in window) {
+      const utterance = new SpeechSynthesisUtterance(message);
+      utterance.lang = "en-GB";
+      utterance.rate = 1.02;
+      utterance.pitch = 0.8;
+      window.speechSynthesis.speak(utterance);
+    }
+  }
+  function alarm() {
+    const ctx = audio.current;
+    if (!ctx || muteRef.current) return;
+    const tone = ctx.createOscillator();
+    const volume = ctx.createGain();
+    tone.frequency.setValueAtTime(850, ctx.currentTime);
+    tone.frequency.setValueAtTime(650, ctx.currentTime + 0.18);
+    volume.gain.setValueAtTime(0.045, ctx.currentTime);
+    volume.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.45);
+    tone.connect(volume);
+    volume.connect(ctx.destination);
+    tone.start();
+    tone.stop(ctx.currentTime + 0.45);
+  }
+  async function start() {
+    window.speechSynthesis?.cancel();
+    if (audio.current) await audio.current.close();
+    const ctx = new AudioContext();
+    audio.current = ctx;
+    await ctx.resume();
+    const volume = ctx.createGain();
+    volume.gain.value = muteRef.current ? 0 : 0.018;
+    volume.connect(ctx.destination);
+    gain.current = volume;
+    [63, 65, 126].forEach((f) => {
+      const osc = ctx.createOscillator();
+      osc.type = "sawtooth";
+      osc.frequency.value = f;
+      osc.connect(volume);
+      osc.start();
+    });
+    setAnswer("");
+    setCaption("");
+    lastAlarm.current = 0;
+    publish({ ...initial(), status: "flying" });
+    input.current?.focus();
+  }
   useEffect(() => {
-    if (status !== "flying") return;
-    const timer = window.setInterval(() => setTimeLeft((current) => {
-      if (current > 1) return current - 1;
-      penalise(`Time expired — ${question.answers[0]}`); nextQuestion(correct, question.id); return QUESTION_TIME_SECONDS;
-    }), 1000);
-    return () => window.clearInterval(timer);
-  }, [correct, nextQuestion, penalise, question, status]);
-
-  function startGame() {
-    setAltitude(STARTING_ALTITUDE_FT); setCorrect(0); setAttempts(0); setStreak(0); setQuestion(pickQuestion("A1"));
-    setFeedback(null); setTimeLeft(QUESTION_TIME_SECONDS); setStatus("flying"); window.setTimeout(() => inputRef.current?.focus(), 50);
-  }
-
-  function submitAnswer(event: FormEvent) {
-    event.preventDefault(); if (!answer.trim() || status !== "flying") return;
-    const accepted = question.answers.map(normaliseAnswer).includes(normaliseAnswer(answer));
+    const timer = window.setInterval(() => {
+      const s = live.current;
+      if (s.status !== "flying") return;
+      const dt = 0.1;
+      const n = { ...s, elapsed: s.elapsed + dt, time: s.time - dt };
+      if (!n.incident && n.elapsed >= n.nextEmergency) {
+        const kinds: Incident[] = ["downdraft", "engine", "icing"];
+        n.incident = kinds[Math.floor(n.elapsed / 25 - 1) % 3];
+        n.recovery = 0;
+        alarm();
+        say(INCIDENTS[n.incident].title);
+      }
+      const drain = n.incident ? INCIDENTS[n.incident].drain : 18;
+      if (n.target < 37000) n.target = Math.max(0, n.target - drain * dt);
+      const difference = n.target - n.altitude;
+      n.altitude = Math.max(
+        0,
+        Math.min(
+          37000,
+          n.altitude +
+            Math.sign(difference) *
+              Math.min(Math.abs(difference), dt * (difference < 0 ? 140 : 650)),
+        ),
+      );
+      n.pitch = difference > 30 ? 0.12 : difference < -30 ? -0.13 : 0;
+      for (const threshold of crossedAltitudes(s.altitude, n.altitude))
+        say(labels[threshold]);
+      if (n.altitude < 200 && n.elapsed - lastAlarm.current > 4) {
+        lastAlarm.current = n.elapsed;
+        alarm();
+        say("Terrain. Pull up.");
+      }
+      if (n.time <= 0) {
+        n.attempts++;
+        n.streak = 0;
+        n.target = Math.max(0, n.target - 750);
+        n.feedback = `Time expired: ${n.question.answers.join(" / ")}`;
+        n.question = pickQuestion(levelForStreak(n.correct), n.question.id);
+        n.time = 10;
+        setAnswer("");
+      }
+      if (n.altitude <= 0 || n.altitude >= 36999) {
+        n.status = n.altitude <= 0 ? "lost" : "won";
+        window.speechSynthesis?.cancel();
+        say(n.status === "won" ? "Mission accomplished" : "Flight ended");
+        if (gain.current) gain.current.gain.value = 0;
+      }
+      publish(n);
+    }, 100);
+    const pause = () => {
+      if (document.hidden && live.current.status === "flying") {
+        publish({ ...live.current, status: "paused" });
+        window.speechSynthesis?.cancel();
+        void audio.current?.suspend();
+      }
+    };
+    document.addEventListener("visibilitychange", pause);
+    return () => {
+      clearInterval(timer);
+      document.removeEventListener("visibilitychange", pause);
+      window.speechSynthesis?.cancel();
+      void audio.current?.close();
+    };
+    // The fixed clock reads current flight and mute state through refs.
+  }, []);
+  function submit(e: FormEvent) {
+    e.preventDefault();
+    const s = live.current;
+    if (s.status !== "flying" || !answer.trim()) return;
+    const accepted = s.question.answers.some(
+      (a) => normaliseAnswer(a) === normaliseAnswer(answer),
+    );
+    const n = { ...s, attempts: s.attempts + 1, time: 10 };
     if (accepted) {
-      const newCorrect = correct + 1; const gain = climbForAnswer(timeLeft, streak);
-      setCorrect(newCorrect); setAttempts((value) => value + 1); setStreak((value) => value + 1);
-      setFeedback({ kind: "good", message: `Correct +${gain.toLocaleString("en-GB")} ft` }); setPitch(0.2);
-      setAltitude((current) => { const updated = Math.min(SERVICE_CEILING_FT, current + gain); if (updated === SERVICE_CEILING_FT) setStatus("won"); return updated; });
-      window.setTimeout(() => setPitch(0.04), 900); nextQuestion(newCorrect, question.id);
-    } else { penalise(`Correct answer: ${question.answers.join(" / ")}`); nextQuestion(correct, question.id); }
+      n.correct++;
+      n.streak++;
+      n.target = Math.min(37000, n.target + climbForAnswer(s.time, s.streak));
+      n.feedback = "Correct — climbing";
+      if (n.incident) {
+        n.recovery++;
+        if (n.recovery >= 2) {
+          n.incident = null;
+          n.nextEmergency = n.elapsed + 30;
+          n.target = Math.min(37000, n.target + 1000);
+          n.feedback = "Emergency recovered! +1,000 ft";
+          say("Power restored. Climb.");
+        }
+      }
+    } else {
+      n.streak = 0;
+      n.target = Math.max(0, n.target - 750);
+      n.feedback = `Correct answer: ${s.question.answers.join(" / ")}`;
+      alarm();
+    }
+    n.question = pickQuestion(levelForStreak(n.correct), s.question.id);
+    publish(n);
+    setAnswer("");
+    input.current?.focus();
   }
-
-  const accuracy = attempts ? Math.round((correct / attempts) * 100) : 100;
-  const progress = (altitude / SERVICE_CEILING_FT) * 100; const formattedSentence = useMemo(() => question.sentence.split("___"), [question]);
-
+  function pause() {
+    const running = live.current.status === "flying";
+    publish({ ...live.current, status: running ? "paused" : "flying" });
+    if (running) {
+      window.speechSynthesis?.cancel();
+      void audio.current?.suspend();
+    } else {
+      void audio.current?.resume();
+    }
+  }
+  const level = levelForStreak(state.correct);
+  const sentence = state.question.sentence.split("___");
+  const accuracy = state.attempts
+    ? Math.round((state.correct / state.attempts) * 100)
+    : 100;
   return (
-    <main className="game-shell">
-      <div className="scene" aria-hidden="true"><FlightScene pitch={pitch} altitude={altitude} status={status} /></div><div className="vignette" />
-      <header className="topbar"><div className="brand"><span>FLIGHT</span> ENGLISH <small>MOSQUITO B Mk XVI</small></div><div className="mission">MISSION 01 <b>CLIMB TO 37,000 FT</b></div></header>
-      <aside className="altimeter" aria-label={`Altitude ${altitude} feet`}><span>ALT</span><strong>{altitude.toLocaleString("en-GB")}</strong><small>FEET</small><div className="altitude-track"><i style={{ height: `${progress}%` }} /></div><em>CEILING 37,000</em></aside>
-      {status === "flying" && <section className="question-card">
-        <div className="question-meta"><span>{level} · {question.hint.toUpperCase()}</span><span>{timeLeft}s</span></div><div className="timer"><i style={{ width: `${(timeLeft / QUESTION_TIME_SECONDS) * 100}%` }} /></div>
-        <h1>{formattedSentence[0]}<span className="blank">?</span>{formattedSentence[1]}</h1>
-        <form onSubmit={submitAnswer}><label htmlFor="answer">Missing preposition</label><div className="answer-row"><input ref={inputRef} id="answer" value={answer} onChange={(event) => setAnswer(event.target.value)} autoComplete="off" spellCheck={false} /><button type="submit">CONFIRM <kbd>↵</kbd></button></div></form>
-        {feedback && <p className={`feedback ${feedback.kind}`}>{feedback.message}</p>}
-      </section>}
-      <div className="telemetry"><div><span>LEVEL</span><b>{level}</b></div><div><span>STREAK</span><b>{streak}</b></div><div><span>ACCURACY</span><b>{accuracy}%</b></div></div>
-      {status !== "flying" && <section className="briefing">
-        <p className="eyebrow">{status === "idle" ? "RAF BOMBER COMMAND · FLIGHT BRIEFING" : status === "won" ? "SERVICE CEILING REACHED" : "AIRCRAFT LOST"}</p>
-        <h1>{status === "idle" ? "CLIMB WITH EVERY WORD." : status === "won" ? "MISSION ACCOMPLISHED." : "RETURN TO BASE."}</h1>
-        <p>{status === "idle" ? "Supply the missing English preposition. Correct answers generate lift; mistakes and hesitation cost altitude. Difficulty rises from A1 to C1 as you climb." : `Final altitude: ${altitude.toLocaleString("en-GB")} ft · Accuracy: ${accuracy}%`}</p>
-        <div className="aircraft-facts"><span>TWIN MERLIN 76/77</span><span>PRESSURISED BOMBER</span><span>CEILING 37,000 FT</span></div>
-        <button onClick={startGame}>{status === "idle" ? "START ENGINES" : "FLY AGAIN"}</button><small>Headphones recommended · Desktop prototype</small>
-      </section>}
-      <div className="desktop-warning">Flight English currently requires a desktop-sized display.</div>
+    <main className={`game-shell ${state.incident ? "emergency" : ""}`}>
+      <div className="scene" aria-hidden="true">
+        <FlightScene
+          pitch={state.pitch}
+          altitude={state.altitude}
+          status={state.status}
+          emergency={!!state.incident}
+        />
+      </div>
+      <div className="vignette" />
+      <header className="topbar">
+        <div className="brand">
+          <span>FLIGHT</span> ENGLISH<small>MOSQUITO B Mk XVI</small>
+        </div>
+        <div className="controls">
+          <button
+            onClick={() => {
+              muteRef.current = !muteRef.current;
+              setMuted(muteRef.current);
+              if (gain.current)
+                gain.current.gain.value = muteRef.current ? 0 : 0.018;
+              if (muteRef.current) window.speechSynthesis?.cancel();
+            }}
+          >
+            {muted ? "UNMUTE" : "MUTE"}
+          </button>
+          {["flying", "paused"].includes(state.status) && (
+            <button onClick={pause}>
+              {state.status === "paused" ? "RESUME" : "PAUSE"}
+            </button>
+          )}
+        </div>
+      </header>
+      <aside className="altimeter">
+        <span>ALTITUDE</span>
+        <strong>{Math.round(state.altitude).toLocaleString("en-GB")}</strong>
+        <small>FEET · TARGET 37,000</small>
+        <div className="altitude-track">
+          <i style={{ height: `${state.altitude / 370}%` }} />
+        </div>
+      </aside>
+      <div className="telemetry">
+        <div>
+          <span>LEVEL</span>
+          <b>{level}</b>
+        </div>
+        <div>
+          <span>STREAK</span>
+          <b>{state.streak}</b>
+        </div>
+        <div>
+          <span>ACCURACY</span>
+          <b>{accuracy}%</b>
+        </div>
+      </div>
+      {state.status === "flying" && (
+        <>
+          <div className="callout" role="status">
+            {caption}
+          </div>
+          {state.incident && (
+            <aside className="incident" role="alert">
+              <strong>⚠ {INCIDENTS[state.incident].title}</strong>
+              <p>{INCIDENTS[state.incident].instruction}</p>
+              <span>
+                RECOVERY {state.recovery} / 2 · LOSING{" "}
+                {INCIDENTS[state.incident].drain} FT/S
+              </span>
+            </aside>
+          )}
+          <section className="question-card">
+            <div className="question-meta">
+              <span>
+                {level} · {state.question.hint}
+              </span>
+              <span>{Math.ceil(state.time)}s</span>
+            </div>
+            <div className="timer">
+              <i style={{ width: `${state.time * 10}%` }} />
+            </div>
+            <h1>
+              {sentence[0]}
+              <span className="blank">?</span>
+              {sentence[1]}
+            </h1>
+            <form onSubmit={submit}>
+              <label htmlFor="answer">Missing preposition</label>
+              <div className="answer-row">
+                <input
+                  autoFocus
+                  ref={input}
+                  id="answer"
+                  autoComplete="off"
+                  spellCheck={false}
+                  value={answer}
+                  onChange={(e) => setAnswer(e.target.value)}
+                />
+                <button>CONFIRM ↵</button>
+              </div>
+            </form>
+            <p className="feedback" role="status">
+              {state.feedback}
+            </p>
+          </section>
+        </>
+      )}
+      {state.status !== "flying" && (
+        <section className="briefing">
+          <p className="eyebrow">MOSQUITO · SURVIVAL FLIGHT</p>
+          <h1>
+            {state.status === "idle"
+              ? "WORDS KEEP YOU FLYING."
+              : state.status === "paused"
+                ? "FLIGHT PAUSED"
+                : state.status === "won"
+                  ? "CEILING REACHED"
+                  : "FLIGHT ENDED"}
+          </h1>
+          <p>
+            {state.status === "idle"
+              ? "Type the missing preposition to climb. Survive downdrafts, engine power loss and wing icing: two correct answers resolve each emergency. Your aircraft steadily loses height — stay sharp."
+              : `Accuracy ${accuracy}% · Correct answers ${state.correct}`}
+          </p>
+          <div className="aircraft-facts">
+            <span>A1 → C1</span>
+            <span>3 EMERGENCIES</span>
+            <span>VOICE CALLOUTS</span>
+          </div>
+          <button onClick={state.status === "paused" ? pause : start}>
+            {state.status === "paused" ? "RESUME FLIGHT" : "START ENGINES"}
+          </button>
+          <small>
+            Modern-style synthetic callouts · Desktop · Sound can be muted
+          </small>
+        </section>
+      )}
+      <div className="desktop-warning">
+        Flight English requires a desktop-sized display.
+      </div>
     </main>
   );
 }
