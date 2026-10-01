@@ -15,22 +15,27 @@ test("each level has twenty-six questions", () => {
   }
 });
 
-test("music-inspired questions include unique artist and song attribution", () => {
-  const musicQuestions = QUESTIONS.filter((question) => question.source);
-  assert.equal(musicQuestions.length, 30);
-  assert.equal(new Set(musicQuestions.map((question) => question.source.artist)).size, 30);
-  for (const question of musicQuestions) {
-    assert.ok(question.source.artist.length > 0);
-    assert.ok(question.source.song.length > 0);
+test("both modes include thirty attributed music-inspired questions", () => {
+  for (const bank of [QUESTIONS, PHRASAL_VERB_QUESTIONS]) {
+    const musicQuestions = bank.filter((question) => question.source);
+    assert.equal(musicQuestions.length, 30);
+    assert.equal(
+      new Set(musicQuestions.map((question) => question.source.artist)).size,
+      30,
+    );
+    for (const question of musicQuestions) {
+      assert.ok(question.source.artist.length > 0);
+      assert.ok(question.source.song.length > 0);
+    }
   }
 });
 
-test("each level has twenty phrasal-verb questions", () => {
+test("each level has twenty-six phrasal-verb questions", () => {
   for (const level of LEVELS) {
     assert.equal(
       PHRASAL_VERB_QUESTIONS.filter((question) => question.level === level)
         .length,
-      20,
+      26,
     );
   }
 });
