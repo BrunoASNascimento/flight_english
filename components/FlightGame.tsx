@@ -313,6 +313,14 @@ export default function FlightGame() {
               </span>
               <span>{Math.ceil(state.time)}s</span>
             </div>
+            {state.question.source && (
+              <div className="music-source">
+                <span>MUSIC INSPIRED</span>
+                <strong>{state.question.source.artist}</strong>
+                <span aria-hidden="true">·</span>
+                <em>{state.question.source.song}</em>
+              </div>
+            )}
             <div className="timer">
               <i style={{ width: `${state.time * 10}%` }} />
             </div>

@@ -1,8 +1,25 @@
 export type Level = "A1" | "A2" | "B1" | "B2" | "C1";
-export type Question = { id: string; sentence: string; answers: string[]; level: Level; hint: string };
+export type MusicSource = { artist: string; song: string };
+export type Question = {
+  id: string;
+  sentence: string;
+  answers: string[];
+  level: Level;
+  hint: string;
+  source?: MusicSource;
+};
 export const LEVELS: Level[] = ["A1", "A2", "B1", "B2", "C1"];
 
 const question = (id: string, sentence: string, answers: string[], level: Level, hint: string): Question => ({ id, sentence, answers, level, hint });
+const musicQuestion = (
+  id: string,
+  sentence: string,
+  answers: string[],
+  level: Level,
+  hint: string,
+  artist: string,
+  song: string,
+): Question => ({ id, sentence, answers, level, hint, source: { artist, song } });
 
 export const QUESTIONS: Question[] = [
   question("a1-1", "The keys are ___ the table.", ["on"], "A1", "surface"),
@@ -25,6 +42,12 @@ export const QUESTIONS: Question[] = [
   question("a1-18", "The lamp is ___ the desk.", ["above", "over"], "A1", "higher position"),
   question("a1-19", "They are ___ home now.", ["at"], "A1", "fixed place"),
   question("a1-20", "The café is ___ the park.", ["near", "by"], "A1", "close position"),
+  musicQuestion("a1-music-1", "We walked ___ the woods before sunset.", ["through"], "A1", "movement inside and out", "Taylor Swift", "Out of the Woods"),
+  musicQuestion("a1-music-2", "The chair is ___ the two windows.", ["between"], "A1", "two things", "BABYMONSTER", "Stuck in the Middle"),
+  musicQuestion("a1-music-3", "They fell ___ love during summer.", ["in"], "A1", "fixed expression", "Elvis Presley", "Can't Help Falling in Love"),
+  musicQuestion("a1-music-4", "Never play ___ fire.", ["with"], "A1", "fixed expression", "BLACKPINK", "Playing with Fire"),
+  musicQuestion("a1-music-5", "We danced ___ the night.", ["through"], "A1", "from start to finish", "Dua Lipa", "Dance the Night"),
+  musicQuestion("a1-music-6", "Her voice came ___ the other side.", ["from"], "A1", "source", "Adele", "Hello"),
 
   question("a2-1", "She walked ___ the kitchen and made tea.", ["into"], "A2", "movement inside"),
   question("a2-2", "We travelled ___ train last weekend.", ["by"], "A2", "transport"),
@@ -46,6 +69,12 @@ export const QUESTIONS: Question[] = [
   question("a2-18", "He got ___ the car and drove away.", ["into"], "A2", "transport"),
   question("a2-19", "They walked ___ the lake.", ["around"], "A2", "movement surrounding"),
   question("a2-20", "The lights went out ___ the night.", ["during"], "A2", "period of time"),
+  musicQuestion("a2-music-1", "He lost control ___ his emotions.", ["of"], "A2", "fixed expression", "Teddy Swims", "Lose Control"),
+  musicQuestion("a2-music-2", "The path went ___ the summit to the valley.", ["from"], "A2", "starting point", "Ghost", "From the Pinnacle to the Pit"),
+  musicQuestion("a2-music-3", "Everything worked out ___ the end.", ["in"], "A2", "final result", "Linkin Park", "In the End"),
+  musicQuestion("a2-music-4", "She ran ___ the city before dawn.", ["through"], "A2", "movement inside and out", "Woodkid", "Run Boy Run"),
+  musicQuestion("a2-music-5", "I kept thinking ___ the answer.", ["about"], "A2", "topic", "Arctic Monkeys", "Do I Wanna Know?"),
+  musicQuestion("a2-music-6", "She drove ___ the neighbourhood at night.", ["through"], "A2", "movement inside and out", "Olivia Rodrigo", "drivers license"),
 
   question("b1-1", "I am responsible ___ booking the restaurant.", ["for"], "B1", "dependent preposition"),
   question("b1-2", "The picnic was cancelled ___ the rain.", ["because of", "due to"], "B1", "reason"),
@@ -67,6 +96,12 @@ export const QUESTIONS: Question[] = [
   question("b1-18", "I am looking forward ___ the holiday.", ["to"], "B1", "fixed expression"),
   question("b1-19", "This version differs ___ the old one.", ["from"], "B1", "dependent preposition"),
   question("b1-20", "She dealt ___ the complaint politely.", ["with"], "B1", "phrasal verb"),
+  musicQuestion("b1-music-1", "There was no time ___ hesitation.", ["for"], "B1", "purpose or opportunity", "Billie Eilish", "No Time to Die"),
+  musicQuestion("b1-music-2", "They walked ___ the church in silence.", ["to", "towards"], "B1", "destination or direction", "Hozier", "Take Me to Church"),
+  musicQuestion("b1-music-3", "We ran out ___ time.", ["of"], "B1", "phrasal verb", "The Weeknd", "Out of Time"),
+  musicQuestion("b1-music-4", "She felt nostalgic ___ the end of summer.", ["at"], "B1", "point in time", "Lana Del Rey", "Summertime Sadness"),
+  musicQuestion("b1-music-5", "After all these years, she was still ___ him.", ["into"], "B1", "informal attraction", "Paramore", "Still into You"),
+  musicQuestion("b1-music-6", "The sky was full ___ stars.", ["of"], "B1", "fixed expression", "Coldplay", "A Sky Full of Stars"),
 
   question("b2-1", "We carried on ___ spite of the bad weather.", ["in"], "B2", "fixed expression"),
   question("b2-2", "She was praised ___ staying calm.", ["for"], "B2", "reason for praise"),
@@ -88,6 +123,12 @@ export const QUESTIONS: Question[] = [
   question("b2-18", "I was relieved ___ hear that she was safe.", ["to"], "B2", "infinitive"),
   question("b2-19", "The guide was translated ___ Portuguese.", ["into"], "B2", "change of form"),
   question("b2-20", "The request was refused ___ the grounds of cost.", ["on"], "B2", "formal expression"),
+  musicQuestion("b2-music-1", "She stood ___ the edge of a new beginning.", ["on", "at"], "B2", "position", "Lady Gaga", "The Edge of Glory"),
+  musicQuestion("b2-music-2", "He felt locked out ___ his old life.", ["of"], "B2", "phrasal expression", "Bruno Mars", "Locked Out of Heaven"),
+  musicQuestion("b2-music-3", "She felt ___ top of the world.", ["on"], "B2", "fixed expression", "Imagine Dragons", "On Top of the World"),
+  musicQuestion("b2-music-4", "Everyone danced ___ the party.", ["at"], "B2", "event", "Miley Cyrus", "Party in the U.S.A."),
+  musicQuestion("b2-music-5", "The memory stayed ___ her mind.", ["on"], "B2", "fixed expression", "Rihanna", "Love on the Brain"),
+  musicQuestion("b2-music-6", "They were completely ___ love.", ["in"], "B2", "fixed expression", "Beyoncé", "Crazy in Love"),
 
   question("c1-1", "The decision was made ___ accordance with company policy.", ["in"], "C1", "formal fixed expression"),
   question("c1-2", "The offer is contingent ___ you providing two references.", ["on", "upon"], "C1", "dependent preposition"),
@@ -109,6 +150,12 @@ export const QUESTIONS: Question[] = [
   question("c1-18", "He made the choice independently ___ his parents.", ["of"], "C1", "formal dependent preposition"),
   question("c1-19", "The complaint was handled ___ accordance with the law.", ["in"], "C1", "formal fixed expression"),
   question("c1-20", "They rented the flat ___ the understanding that pets were allowed.", ["on"], "C1", "formal collocation"),
+  musicQuestion("c1-music-1", "The truth lay ___ two opposing views.", ["between"], "C1", "abstract position", "Florence + the Machine", "Between Two Lungs"),
+  musicQuestion("c1-music-2", "Their conversation unfolded ___ the quiet of the salon.", ["amid", "in"], "C1", "surrounding atmosphere", "Lorde", "Stoned at the Nail Salon"),
+  musicQuestion("c1-music-3", "The performance brought the story ___ life.", ["to"], "C1", "fixed expression", "Evanescence", "Bring Me to Life"),
+  musicQuestion("c1-music-4", "She remained composed ___ intense pressure.", ["under"], "C1", "condition", "Queen", "Under Pressure"),
+  musicQuestion("c1-music-5", "He placed all his trust ___ her.", ["in"], "C1", "dependent preposition", "ABBA", "Lay All Your Love on Me"),
+  musicQuestion("c1-music-6", "The change was seen as a sign ___ the times.", ["of"], "C1", "fixed expression", "Harry Styles", "Sign of the Times"),
 ];
 
 export function levelForStreak(correctAnswers: number): Level {
