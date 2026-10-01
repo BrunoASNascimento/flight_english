@@ -1,7 +1,11 @@
 "use client";
 import dynamic from "next/dynamic";
 import { FormEvent, useEffect, useRef, useState } from "react";
-import { pickQuestion, levelForStreak } from "@/game/questions";
+import {
+  pickQuestion,
+  levelForStreak,
+  type ExerciseMode,
+} from "@/game/questions";
 import { isAcceptedAnswer, climbForAnswer } from "@/game/rules";
 import { crossedAltitudes, INCIDENTS, type Incident } from "@/game/flight";
 const FlightScene = dynamic(() => import("./FlightScene"), { ssr: false });
@@ -12,9 +16,33 @@ const labels: Record<number, string> = {
   300: "Three Hundred",
   200: "Two Hundred",
 };
-function initial() {
+const MODE_OPTIONS: ExerciseMode[] = ["prepositions", "phrasal-verbs"];
+const MODE_DETAILS: Record<
+  ExerciseMode,
+  {
+    title: string;
+    shortTitle: string;
+    description: string;
+    inputLabel: string;
+  }
+> = {
+  prepositions: {
+    title: "PREPOSITIONS",
+    shortTitle: "PREPOSITION",
+    description: "Complete everyday sentences with the missing preposition.",
+    inputLabel: "Missing preposition",
+  },
+  "phrasal-verbs": {
+    title: "PHRASAL VERBS",
+    shortTitle: "PHRASAL VERB",
+    description: "Complete everyday sentences with the missing phrasal verb.",
+    inputLabel: "Missing phrasal verb",
+  },
+};
+function initial(mode: ExerciseMode = "prepositions") {
   return {
     status: "idle",
+    mode,
     altitude: 5000,
     target: 5000,
     correct: 0,
@@ -25,14 +53,16 @@ function initial() {
     nextEmergency: 25,
     incident: null as Incident | null,
     recovery: 0,
-    question: pickQuestion("A1"),
+    question: pickQuestion(mode, "A1"),
     feedback: "",
     pitch: 0,
   };
 }
 type Flight = ReturnType<typeof initial>;
 export default function FlightGame() {
-  const [state, setState] = useState<Flight>(initial);
+  const [selectedMode, setSelectedMode] =
+    useState<ExerciseMode>("prepositions");
+  const [state, setState] = useState<Flight>(() => initial("prepositions"));
   const live = useRef(state);
   const [answer, setAnswer] = useState("");
   const [muted, setMuted] = useState(false);
@@ -136,7 +166,7 @@ export default function FlightGame() {
     setAnswer("");
     setCaption("");
     lastAlarm.current = 0;
-    publish({ ...initial(), status: "flying" });
+    publish({ ...initial(selectedMode), status: "flying" });
     input.current?.focus();
   }
   useEffect(() => {
@@ -177,7 +207,11 @@ export default function FlightGame() {
         n.streak = 0;
         n.target = Math.max(0, n.target - 750);
         n.feedback = `Time expired: ${n.question.answers.join(" / ")}`;
-        n.question = pickQuestion(levelForStreak(n.correct), n.question.id);
+        n.question = pickQuestion(
+          n.mode,
+          levelForStreak(n.correct),
+          n.question.id,
+        );
         n.time = 10;
         setAnswer("");
       }
@@ -232,7 +266,11 @@ export default function FlightGame() {
       n.feedback = `Correct answer: ${s.question.answers.join(" / ")}`;
       incorrectAnswerAlarm();
     }
-    n.question = pickQuestion(levelForStreak(n.correct), s.question.id);
+    n.question = pickQuestion(
+      s.mode,
+      levelForStreak(n.correct),
+      s.question.id,
+    );
     publish(n);
     setAnswer("");
     input.current?.focus();
@@ -248,6 +286,8 @@ export default function FlightGame() {
     }
   }
   const level = levelForStreak(state.correct);
+  const modeDetails = MODE_DETAILS[state.mode];
+  const selectedModeDetails = MODE_DETAILS[selectedMode];
   const sentence = state.question.sentence.split("___");
   const accuracy = state.attempts
     ? Math.round((state.correct / state.attempts) * 100)
@@ -326,7 +366,7 @@ export default function FlightGame() {
           <section className="question-card">
             <div className="question-meta">
               <span>
-                {level} · {state.question.hint}
+                {level} · {modeDetails.shortTitle} · {state.question.hint}
               </span>
               <span>{Math.ceil(state.time)}s</span>
             </div>
@@ -347,7 +387,7 @@ export default function FlightGame() {
               {sentence[1]}
             </h1>
             <form onSubmit={submit}>
-              <label htmlFor="answer">Missing preposition</label>
+              <label htmlFor="answer">{modeDetails.inputLabel}</label>
               <div className="answer-row">
                 <input
                   autoFocus
@@ -387,16 +427,42 @@ export default function FlightGame() {
           </h1>
           <p>
             {state.status === "idle"
-              ? "Type the missing preposition to climb. Survive downdrafts, engine power loss and wing icing: two correct answers resolve each emergency. Your aircraft steadily loses height — stay sharp."
-              : `Accuracy ${accuracy}% · Correct answers ${state.correct}`}
+              ? `${selectedModeDetails.description} Survive downdrafts, engine power loss and wing icing: two correct answers resolve each emergency. Your aircraft steadily loses height — stay sharp.`
+              : `${modeDetails.title} · Accuracy ${accuracy}% · Correct answers ${state.correct}`}
           </p>
+          {state.status !== "paused" && (
+            <div className="mode-menu" role="group" aria-label="Exercise mode">
+              {MODE_OPTIONS.map((mode) => {
+                const details = MODE_DETAILS[mode];
+                const selected = selectedMode === mode;
+                return (
+                  <button
+                    type="button"
+                    key={mode}
+                    className={`mode-option ${selected ? "is-selected" : ""}`}
+                    aria-pressed={selected}
+                    onClick={() => setSelectedMode(mode)}
+                  >
+                    <span>{mode === "prepositions" ? "01" : "02"}</span>
+                    <strong>{details.title}</strong>
+                    <small>{details.description}</small>
+                  </button>
+                );
+              })}
+            </div>
+          )}
           <div className="aircraft-facts">
             <span>A1 → C1</span>
             <span>3 EMERGENCIES</span>
             <span>VOICE CALLOUTS</span>
           </div>
-          <button onClick={state.status === "paused" ? pause : start}>
-            {state.status === "paused" ? "RESUME FLIGHT" : "START ENGINES"}
+          <button
+            className="launch-button"
+            onClick={state.status === "paused" ? pause : start}
+          >
+            {state.status === "paused"
+              ? "RESUME FLIGHT"
+              : `START ${selectedModeDetails.title}`}
           </button>
           <small>
             Modern-style synthetic callouts · Mobile and desktop · Sound can be muted

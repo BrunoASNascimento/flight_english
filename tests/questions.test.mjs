@@ -1,6 +1,12 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { LEVELS, QUESTIONS } from "../game/questions.ts";
+import {
+  LEVELS,
+  QUESTION_BANKS,
+  QUESTIONS,
+  pickQuestion,
+} from "../game/questions.ts";
+import { PHRASAL_VERB_QUESTIONS } from "../game/phrasal-verbs.ts";
 import { isAcceptedAnswer } from "../game/rules.ts";
 
 test("each level has twenty-six questions", () => {
@@ -19,16 +25,38 @@ test("music-inspired questions include unique artist and song attribution", () =
   }
 });
 
+test("each level has twenty phrasal-verb questions", () => {
+  for (const level of LEVELS) {
+    assert.equal(
+      PHRASAL_VERB_QUESTIONS.filter((question) => question.level === level)
+        .length,
+      20,
+    );
+  }
+});
+
+test("question selection stays inside the chosen exercise mode", () => {
+  assert.equal(QUESTION_BANKS.prepositions, QUESTIONS);
+  assert.equal(QUESTION_BANKS["phrasal-verbs"], PHRASAL_VERB_QUESTIONS);
+  assert.match(pickQuestion("prepositions", "A1").id, /^a1-/);
+  assert.match(pickQuestion("phrasal-verbs", "C1").id, /^pv-c1-/);
+});
+
 test("accepts every valid alternative answer", () => {
   assert.equal(isAcceptedAnswer("near", ["near", "by"]), true);
   assert.equal(isAcceptedAnswer("BY", ["near", "by"]), true);
   assert.equal(isAcceptedAnswer("  due   to  ", ["because of", "due to"]), true);
+  assert.equal(isAcceptedAnswer("SWITCH OFF", ["turn off", "switch off"]), true);
   assert.equal(isAcceptedAnswer("because", ["because of", "due to"]), false);
 });
 
-test("every question has a unique id and a usable answer", () => {
-  assert.equal(new Set(QUESTIONS.map((question) => question.id)).size, QUESTIONS.length);
-  for (const question of QUESTIONS) {
+test("every question in both modes has a unique id and a usable answer", () => {
+  const allQuestions = [...QUESTIONS, ...PHRASAL_VERB_QUESTIONS];
+  assert.equal(
+    new Set(allQuestions.map((question) => question.id)).size,
+    allQuestions.length,
+  );
+  for (const question of allQuestions) {
     assert.match(question.sentence, /___/);
     assert.ok(question.answers.length > 0);
   }

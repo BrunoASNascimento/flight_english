@@ -1,4 +1,7 @@
+import { PHRASAL_VERB_QUESTIONS } from "./phrasal-verbs.ts";
+
 export type Level = "A1" | "A2" | "B1" | "B2" | "C1";
+export type ExerciseMode = "prepositions" | "phrasal-verbs";
 export type MusicSource = { artist: string; song: string };
 export type Question = {
   id: string;
@@ -158,11 +161,23 @@ export const QUESTIONS: Question[] = [
   musicQuestion("c1-music-6", "The change was seen as a sign ___ the times.", ["of"], "C1", "fixed expression", "Harry Styles", "Sign of the Times"),
 ];
 
+export const QUESTION_BANKS: Record<ExerciseMode, Question[]> = {
+  prepositions: QUESTIONS,
+  "phrasal-verbs": PHRASAL_VERB_QUESTIONS,
+};
+
 export function levelForStreak(correctAnswers: number): Level {
   return LEVELS[Math.min(Math.floor(correctAnswers / 4), LEVELS.length - 1)];
 }
 
-export function pickQuestion(level: Level, previousId?: string): Question {
-  const pool = QUESTIONS.filter((question) => question.level === level && question.id !== previousId);
-  return pool[Math.floor(Math.random() * pool.length)] ?? QUESTIONS[0];
+export function pickQuestion(
+  mode: ExerciseMode,
+  level: Level,
+  previousId?: string,
+): Question {
+  const bank = QUESTION_BANKS[mode];
+  const pool = bank.filter(
+    (question) => question.level === level && question.id !== previousId,
+  );
+  return pool[Math.floor(Math.random() * pool.length)] ?? bank[0];
 }
