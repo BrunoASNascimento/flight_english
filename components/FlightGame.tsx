@@ -46,6 +46,23 @@ export default function FlightGame() {
     live.current = next;
     setState(next);
   }
+  useEffect(() => {
+    const viewport = window.visualViewport;
+    const setGameHeight = () => {
+      document.documentElement.style.setProperty(
+        "--game-height",
+        `${Math.round(viewport?.height ?? window.innerHeight)}px`,
+      );
+    };
+
+    setGameHeight();
+    window.addEventListener("resize", setGameHeight);
+    viewport?.addEventListener("resize", setGameHeight);
+    return () => {
+      window.removeEventListener("resize", setGameHeight);
+      viewport?.removeEventListener("resize", setGameHeight);
+    };
+  }, []);
   function say(message: string) {
     setCaption(message);
     if (!muteRef.current && "speechSynthesis" in window) {
@@ -338,10 +355,16 @@ export default function FlightGame() {
                   id="answer"
                   autoComplete="off"
                   spellCheck={false}
+                  autoCapitalize="none"
+                  autoCorrect="off"
+                  inputMode="text"
+                  enterKeyHint="done"
                   value={answer}
                   onChange={(e) => setAnswer(e.target.value)}
                 />
-                <button>CONFIRM ↵</button>
+                <button>
+                  CONFIRM <span className="keyboard-hint">↵</span>
+                </button>
               </div>
             </form>
             <p className="feedback" role="status">
@@ -376,13 +399,10 @@ export default function FlightGame() {
             {state.status === "paused" ? "RESUME FLIGHT" : "START ENGINES"}
           </button>
           <small>
-            Modern-style synthetic callouts · Desktop · Sound can be muted
+            Modern-style synthetic callouts · Mobile and desktop · Sound can be muted
           </small>
         </section>
       )}
-      <div className="desktop-warning">
-        Flight English requires a desktop-sized display.
-      </div>
     </main>
   );
 }
