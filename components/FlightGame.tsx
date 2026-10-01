@@ -70,6 +70,35 @@ export default function FlightGame() {
     tone.start();
     tone.stop(ctx.currentTime + 0.45);
   }
+  function incorrectAnswerAlarm() {
+    const ctx = audio.current;
+    if (!ctx || muteRef.current) return;
+
+    const volume = ctx.createGain();
+    volume.gain.setValueAtTime(0.0001, ctx.currentTime);
+    volume.connect(ctx.destination);
+
+    [0, 0.18, 0.36].forEach((start, index) => {
+      const tone = ctx.createOscillator();
+      tone.type = "square";
+      tone.frequency.setValueAtTime(
+        index % 2 === 0 ? 880 : 660,
+        ctx.currentTime + start,
+      );
+      tone.connect(volume);
+      volume.gain.setValueAtTime(0.0001, ctx.currentTime + start);
+      volume.gain.linearRampToValueAtTime(
+        0.052,
+        ctx.currentTime + start + 0.012,
+      );
+      volume.gain.exponentialRampToValueAtTime(
+        0.0001,
+        ctx.currentTime + start + 0.13,
+      );
+      tone.start(ctx.currentTime + start);
+      tone.stop(ctx.currentTime + start + 0.14);
+    });
+  }
   async function start() {
     window.speechSynthesis?.cancel();
     if (audio.current) await audio.current.close();
@@ -184,7 +213,7 @@ export default function FlightGame() {
       n.streak = 0;
       n.target = Math.max(0, n.target - 750);
       n.feedback = `Correct answer: ${s.question.answers.join(" / ")}`;
-      alarm();
+      incorrectAnswerAlarm();
     }
     n.question = pickQuestion(levelForStreak(n.correct), s.question.id);
     publish(n);
