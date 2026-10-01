@@ -1,86 +1,295 @@
 "use client";
-
-import { Cloud, Clouds, Environment, Sky } from "@react-three/drei";
+import { Sky } from "@react-three/drei";
 import { Canvas, useFrame } from "@react-three/fiber";
-import { useRef } from "react";
-import type { Group } from "three";
+import { useMemo, useRef } from "react";
+import { Shape, Group, Vector2 } from "three";
 
-type Props = { pitch: number; altitude: number; status: "idle" | "flying" | "won" | "lost" };
-
-function Propeller() {
-  const prop = useRef<Group>(null);
-  useFrame((_, delta) => { if (prop.current) prop.current.rotation.z += delta * 35; });
+type Props = {
+  pitch: number;
+  altitude: number;
+  status: string;
+  emergency?: boolean;
+};
+// Coordinates in metres: nose -Z, tail +Z, span along X.
+function Surface({
+  points,
+  position = [0, 0, 0],
+  rotation = [-Math.PI / 2, 0, 0],
+  color = "#667364",
+}: {
+  points: number[][];
+  position?: [number, number, number];
+  rotation?: [number, number, number];
+  color?: string;
+}) {
+  const shape = useMemo(() => {
+    const s = new Shape();
+    points.forEach(([x, y], i) => (i ? s.lineTo(x, y) : s.moveTo(x, y)));
+    s.closePath();
+    return s;
+  }, [points]);
   return (
-    <group ref={prop} position={[0, 0.04, -0.05]} rotation={[Math.PI / 2, 0, 0]}>
-      <mesh scale={[0.08, 1.1, 0.04]}><boxGeometry /><meshStandardMaterial color="#151719" /></mesh>
-      <mesh scale={[1.1, 0.08, 0.04]}><boxGeometry /><meshStandardMaterial color="#151719" /></mesh>
-      <mesh scale={0.14}><sphereGeometry /><meshStandardMaterial color="#d6c7a1" metalness={0.45} /></mesh>
+    <mesh position={position} rotation={rotation}>
+      <extrudeGeometry
+        args={[
+          shape,
+          {
+            depth: 0.08,
+            bevelEnabled: true,
+            bevelSize: 0.06,
+            bevelThickness: 0.04,
+            bevelSegments: 2,
+            steps: 1,
+          },
+        ]}
+      />
+      <meshStandardMaterial color={color} roughness={0.78} />
+    </mesh>
+  );
+}
+function Body({
+  profile,
+  color,
+  scale = [1, 1, 1],
+  position = [0, 0, 0],
+}: {
+  profile: number[][];
+  color: string;
+  scale?: [number, number, number];
+  position?: [number, number, number];
+}) {
+  const points = useMemo(
+    () => profile.map(([r, z]) => new Vector2(r, z)),
+    [profile],
+  );
+  return (
+    <mesh position={position} rotation={[Math.PI / 2, 0, 0]} scale={scale}>
+      <latheGeometry args={[points, 48]} />
+      <meshStandardMaterial color={color} roughness={0.65} metalness={0.12} />
+    </mesh>
+  );
+}
+function Propeller({ x }: { x: number }) {
+  const ref = useRef<Group>(null);
+  useFrame((_, dt) => {
+    if (ref.current) ref.current.rotation.z += dt * 45;
+  });
+  return (
+    <group position={[x, 0, -3.35]}>
+      <Body
+        profile={[
+          [0, -0.62],
+          [0.22, -0.4],
+          [0.35, 0],
+        ]}
+        color="#a8ada6"
+      />
+      <group ref={ref}>
+        {[0, 1, 2].map((i) => (
+          <group key={i} rotation={[0, 0, (i * Math.PI * 2) / 3]}>
+            <mesh position={[0, 0.85, 0]} scale={[0.17, 1.2, 0.055]}>
+              <sphereGeometry args={[1, 12, 12]} />
+              <meshStandardMaterial color="#202522" />
+            </mesh>
+            <mesh position={[0, 1.48, 0]} scale={[0.12, 0.12, 0.057]}>
+              <sphereGeometry />
+              <meshStandardMaterial color="#d5ae43" />
+            </mesh>
+          </group>
+        ))}
+      </group>
     </group>
   );
 }
-
-function Mosquito({ pitch, status }: Pick<Props, "pitch" | "status">) {
-  const aircraft = useRef<Group>(null);
-  useFrame((state, delta) => {
-    if (!aircraft.current) return;
-    aircraft.current.rotation.x += (pitch - aircraft.current.rotation.x) * delta * 2.8;
-    aircraft.current.rotation.z = Math.sin(state.clock.elapsedTime * 0.6) * 0.025;
-    aircraft.current.position.y = Math.sin(state.clock.elapsedTime * 1.2) * 0.07;
-    if (status === "lost") aircraft.current.rotation.z += delta * 0.35;
+function Aircraft({ pitch, emergency }: Props) {
+  const ref = useRef<Group>(null);
+  useFrame(({ clock }, dt) => {
+    if (ref.current) {
+      ref.current.rotation.x +=
+        (pitch - ref.current.rotation.x) * Math.min(1, dt * 3);
+      ref.current.rotation.z =
+        Math.sin(clock.elapsedTime * (emergency ? 7 : 0.6)) *
+        (emergency ? 0.065 : 0.012);
+      ref.current.position.y = Math.sin(clock.elapsedTime) * 0.035;
+    }
   });
-
-  const wood = "#6f806a";
   return (
-    <group ref={aircraft} rotation={[0.05, 0, 0]}>
-      <mesh rotation={[Math.PI / 2, 0, 0]} scale={[0.5, 0.52, 2.8]}>
-        <cylinderGeometry args={[0.45, 0.14, 2.4, 18]} /><meshStandardMaterial color={wood} roughness={0.7} />
+    <group ref={ref}>
+      <Body
+        profile={[
+          [0, -6.1],
+          [0.38, -5.85],
+          [0.62, -5],
+          [0.75, -3.2],
+          [0.78, -1.5],
+          [0.7, 0],
+          [0.55, 2],
+          [0.32, 4.3],
+          [0.08, 6],
+          [0, 6.2],
+        ]}
+        color="#788078"
+        scale={[1, 1, 0.95]}
+      />
+      <mesh position={[0, 0.6, -3.1]} scale={[0.69, 0.68, 1.4]}>
+        <sphereGeometry args={[1, 32, 24]} />
+        <meshStandardMaterial
+          color="#658893"
+          metalness={0.5}
+          roughness={0.15}
+        />
       </mesh>
-      <mesh position={[0, 0.42, -0.25]} scale={[0.43, 0.25, 0.72]}>
-        <sphereGeometry args={[1, 16, 10]} /><meshStandardMaterial color="#7896a2" metalness={0.35} roughness={0.2} />
+      {[-3.8, -3.1, -2.4].map((z) => (
+        <mesh key={z} position={[0, 0.69, z]} scale={[0.705, 0.61, 0.035]}>
+          <torusGeometry args={[1, 0.035, 8, 40, Math.PI]} />
+          <meshStandardMaterial color="#424e43" />
+        </mesh>
+      ))}
+      <mesh position={[0, 0.02, -5.5]} scale={[0.56, 0.48, 0.66]}>
+        <sphereGeometry args={[1, 32, 20]} />
+        <meshStandardMaterial
+          color="#718f95"
+          metalness={0.35}
+          roughness={0.16}
+        />
       </mesh>
-      <mesh position={[0, -0.05, 0.15]} scale={[5.2, 0.12, 0.72]}>
-        <boxGeometry /><meshStandardMaterial color={wood} roughness={0.75} />
-      </mesh>
-      <mesh position={[0, -0.18, 0.22]} scale={[4.9, 0.05, 0.65]}>
-        <boxGeometry /><meshStandardMaterial color="#a9aca5" />
-      </mesh>
-      {[-1.75, 1.75].map((x) => (
-        <group key={x} position={[x, 0.02, 0.05]}>
-          <mesh rotation={[Math.PI / 2, 0, 0]} scale={[0.54, 0.54, 1.25]}>
-            <cylinderGeometry args={[0.42, 0.31, 1.9, 16]} /><meshStandardMaterial color="#667761" />
+      <Surface
+        points={[
+          [-0.6, 1.9],
+          [-2.5, 1.9],
+          [-7.9, 0.5],
+          [-8.25, 0.1],
+          [-8.05, -0.5],
+          [-5.2, -0.9],
+          [-0.6, -1.3],
+        ]}
+      />
+      <Surface
+        points={[
+          [0.6, 1.9],
+          [2.5, 1.9],
+          [7.9, 0.5],
+          [8.25, 0.1],
+          [8.05, -0.5],
+          [5.2, -0.9],
+          [0.6, -1.3],
+        ]}
+      />
+      {[-2.7, 2.7].map((x) => (
+        <group key={x}>
+          <Body
+            position={[x, -0.1, 0]}
+            profile={[
+              [0, -3.35],
+              [0.42, -3.05],
+              [0.54, -2.3],
+              [0.57, -0.8],
+              [0.48, 1.7],
+              [0.25, 2.9],
+              [0, 3.4],
+            ]}
+            color="#596957"
+            scale={[1, 1, 1.12]}
+          />
+          <Propeller x={x} />
+          <mesh position={[x, -0.61, -2.4]} scale={[0.3, 0.15, 0.6]}>
+            <boxGeometry />
+            <meshStandardMaterial color="#242b28" />
           </mesh>
-          <Propeller />
+          {[0, 1, 2, 3, 4, 5].map((i) => (
+            <mesh
+              key={i}
+              position={[x + 0.53, 0.08, -2.2 + i * 0.2]}
+              rotation={[0, 0, Math.PI / 2]}
+            >
+              <cylinderGeometry args={[0.05, 0.07, 0.16, 8]} />
+              <meshStandardMaterial color="#4b3830" />
+            </mesh>
+          ))}
         </group>
       ))}
-      <mesh position={[0, 0.14, 2.1]} scale={[1.75, 0.09, 0.46]}><boxGeometry /><meshStandardMaterial color={wood} /></mesh>
-      <mesh position={[0, 0.62, 2.2]} scale={[0.08, 0.66, 0.55]}><boxGeometry /><meshStandardMaterial color={wood} /></mesh>
+      <Surface
+        position={[0, 0.15, 4.65]}
+        points={[
+          [-0.15, 0.5],
+          [-2.8, 0.15],
+          [-3, -0.25],
+          [-2.5, -0.7],
+          [0, -0.8],
+          [2.5, -0.7],
+          [3, -0.25],
+          [2.8, 0.15],
+          [0.15, 0.5],
+        ]}
+      />
+      <Surface
+        position={[0, 0.1, 4.1]}
+        rotation={[0, Math.PI / 2, 0]}
+        points={[
+          [0, 0],
+          [0.35, 1.9],
+          [0.75, 2.3],
+          [1.25, 2.25],
+          [1.8, 1.45],
+          [1.9, 0],
+        ]}
+      />
+      {[-5.8, 5.8].map((x) => (
+        <group key={x} position={[x, 0.16, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+          {[
+            ["#1c314d", 0.57],
+            ["#c43a31", 0.23],
+          ].map(([color, r], i) => (
+            <mesh key={i} position={[0, 0, i * 0.004]}>
+              <circleGeometry args={[Number(r), 48]} />
+              <meshBasicMaterial color={String(color)} />
+            </mesh>
+          ))}
+        </group>
+      ))}
     </group>
   );
 }
-
-function World({ altitude }: Pick<Props, "altitude">) {
-  const height = Math.min(1, altitude / 37_000);
+function Landscape({ altitude, status }: Props) {
+  const ref = useRef<Group>(null);
+  useFrame((_, dt) => {
+    if (ref.current && status === "flying")
+      ref.current.position.z = (ref.current.position.z + dt * 12) % 30;
+  });
   return (
-    <>
-      <Sky distance={450000} sunPosition={[8, 4 - height * 2, -8]} inclination={0.53} azimuth={0.21} turbidity={7 - height * 3} />
-      <ambientLight intensity={0.7} /><directionalLight position={[5, 8, -4]} intensity={2.3} color="#fff4dc" />
-      <Clouds limit={80} range={80}>
-        <Cloud seed={3} position={[-8, -3.5, -12]} scale={2.5} volume={6} color="#d6dbe0" fade={70} />
-        <Cloud seed={8} position={[9, -4, -18]} scale={3.5} volume={8} color="#c8ced4" fade={80} />
-      </Clouds>
-      <mesh position={[0, -7 - height * 12, -22]} rotation={[-Math.PI / 2, 0, 0]} scale={[90, 90, 1]}>
-        <planeGeometry args={[1, 1, 32, 32]} /><meshStandardMaterial color={height > 0.55 ? "#7d8d8c" : "#53694a"} roughness={1} />
-      </mesh>
-      <Environment preset="sunset" />
-    </>
+    <group ref={ref} position={[0, -12 - altitude / 900, 0]}>
+      {Array.from({ length: 144 }, (_, i) => (
+        <mesh
+          key={i}
+          position={[
+            ((i % 12) - 6) * 30,
+            -(i % 3) * 0.05,
+            -Math.floor(i / 12) * 30 + 40,
+          ]}
+          rotation={[-Math.PI / 2, 0, 0]}
+        >
+          <planeGeometry args={[29.8, 29.8]} />
+          <meshStandardMaterial
+            color={["#657344", "#87935e", "#a09a69", "#4e663e"][i % 4]}
+          />
+        </mesh>
+      ))}
+    </group>
   );
 }
-
 export default function FlightScene(props: Props) {
   return (
-    <Canvas camera={{ position: [0, 2.1, 8.5], fov: 42 }} dpr={[1, 1.5]}>
-      <World altitude={props.altitude} /><Mosquito pitch={props.pitch} status={props.status} />
-      <fog attach="fog" args={["#8299a9", 24, 95]} />
+    <Canvas
+      camera={{ position: [0.6, 6.5, 19], fov: 48 }}
+      dpr={[1, 1.5]}
+      onCreated={({ camera }) => camera.lookAt(0, 0, -3)}
+    >
+      <Sky sunPosition={[30, 18, -50]} turbidity={5} />
+      <ambientLight intensity={1.4} />
+      <directionalLight position={[-20, 30, -10]} intensity={2.5} />
+      <Aircraft {...props} />
+      <Landscape {...props} />
+      <fog attach="fog" args={["#9dbece", 85, 320]} />
     </Canvas>
   );
 }
