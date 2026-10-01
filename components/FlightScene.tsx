@@ -321,10 +321,13 @@ function Aircraft({ pitch, emergency, status }: Props) {
   );
 }
 export default function FlightScene(props: Props) {
+  const compactDisplay =
+    typeof window !== "undefined" && window.matchMedia("(max-width: 899px)").matches;
   return (
     <Canvas
       camera={{ position: [0.6, 6.5, 19], fov: 48 }}
-      dpr={[1, 1.5]}
+      dpr={compactDisplay ? [1, 1.15] : [1, 1.5]}
+      gl={{ antialias: !compactDisplay, powerPreference: "high-performance" }}
       onCreated={({ camera }) => camera.lookAt(0, 0, -3)}
     >
       <Sky sunPosition={[30, 18, -50]} turbidity={5} />
