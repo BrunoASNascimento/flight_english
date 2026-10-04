@@ -181,3 +181,80 @@ export function pickQuestion(
   );
   return pool[Math.floor(Math.random() * pool.length)] ?? bank[0];
 }
+
+function normaliseChoice(value: string) {
+  return value.trim().toLocaleLowerCase("en-GB").replace(/\s+/g, " ");
+}
+
+function choiceSimilarity(candidate: string, correctAnswers: string[]) {
+  const candidateWords = normaliseChoice(candidate).split(" ");
+
+  return Math.max(
+    ...correctAnswers.map((answer) => {
+      const answerWords = normaliseChoice(answer).split(" ");
+      let score = 0;
+
+      if (candidateWords.length === answerWords.length) score += 12;
+      else score -= Math.abs(candidateWords.length - answerWords.length) * 4;
+      if (candidateWords[0] === answerWords[0]) score += 8;
+      if (candidateWords.at(-1) === answerWords.at(-1)) score += 5;
+      score += Math.max(0, 5 - Math.abs(candidate.length - answer.length));
+
+      return score;
+    }),
+  );
+}
+
+function shuffle<T>(values: T[], random: () => number) {
+  const shuffled = [...values];
+  for (let index = shuffled.length - 1; index > 0; index--) {
+    const swapIndex = Math.floor(random() * (index + 1));
+    [shuffled[index], shuffled[swapIndex]] = [
+      shuffled[swapIndex],
+      shuffled[index],
+    ];
+  }
+  return shuffled;
+}
+
+export function buildAnswerChoices(
+  mode: ExerciseMode,
+  currentQuestion: Question,
+  random: () => number = Math.random,
+) {
+  const seen = new Set<string>();
+  const correctAnswers = currentQuestion.answers.filter((answer) => {
+    const normalised = normaliseChoice(answer);
+    if (seen.has(normalised)) return false;
+    seen.add(normalised);
+    return true;
+  });
+
+  const distractors = QUESTION_BANKS[mode]
+    .filter(
+      (question) =>
+        question.level === currentQuestion.level &&
+        question.id !== currentQuestion.id,
+    )
+    .flatMap((question) => question.answers)
+    .filter((answer) => {
+      const normalised = normaliseChoice(answer);
+      if (seen.has(normalised)) return false;
+      seen.add(normalised);
+      return true;
+    })
+    .map((answer) => ({
+      answer,
+      score: choiceSimilarity(answer, correctAnswers),
+      tieBreaker: random(),
+    }))
+    .sort((left, right) =>
+      right.score === left.score
+        ? right.tieBreaker - left.tieBreaker
+        : right.score - left.score,
+    )
+    .slice(0, Math.max(0, 4 - correctAnswers.length))
+    .map(({ answer }) => answer);
+
+  return shuffle([...correctAnswers, ...distractors], random);
+}
