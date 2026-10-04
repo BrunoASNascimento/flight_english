@@ -1,20 +1,16 @@
 "use client";
 import dynamic from "next/dynamic";
-import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   buildAnswerChoices,
   pickQuestion,
   levelForStreak,
   type ExerciseMode,
 } from "@/game/questions";
-import {
-  isAcceptedAnswer,
-  climbForAnswer,
-  QUESTION_TIME_SECONDS,
-} from "@/game/rules";
+import { isAcceptedAnswer, climbForAnswer } from "@/game/rules";
 import { crossedAltitudes, INCIDENTS, type Incident } from "@/game/flight";
 const FlightScene = dynamic(() => import("./FlightScene"), { ssr: false });
-const MOBILE_QUESTION_TIME_SECONDS = 8;
+const CHOICE_QUESTION_TIME_SECONDS = 8;
 const labels: Record<number, string> = {
   1000: "One Thousand",
   500: "Five Hundred",
@@ -47,7 +43,7 @@ const MODE_DETAILS: Record<
 };
 function initial(
   mode: ExerciseMode = "prepositions",
-  questionTime = QUESTION_TIME_SECONDS,
+  questionTime = CHOICE_QUESTION_TIME_SECONDS,
 ) {
   return {
     status: "idle",
@@ -74,14 +70,11 @@ export default function FlightGame() {
     useState<ExerciseMode>("prepositions");
   const [state, setState] = useState<Flight>(() => initial("prepositions"));
   const live = useRef(state);
-  const [answer, setAnswer] = useState("");
-  const [mobileChoices, setMobileChoices] = useState(false);
   const [choiceLocked, setChoiceLocked] = useState(false);
   const [muted, setMuted] = useState(false);
   const [caption, setCaption] = useState("");
   const audio = useRef<AudioContext | null>(null);
   const gain = useRef<GainNode | null>(null);
-  const input = useRef<HTMLInputElement>(null);
   const muteRef = useRef(false);
   const lastAlarm = useRef(0);
   function publish(next: Flight) {
@@ -105,16 +98,6 @@ export default function FlightGame() {
       viewport?.removeEventListener("resize", setGameHeight);
     };
   }, []);
-  useEffect(() => {
-    const media = window.matchMedia("(max-width: 899px)");
-    const updateInputMode = () => setMobileChoices(media.matches);
-    updateInputMode();
-    media.addEventListener("change", updateInputMode);
-    return () => media.removeEventListener("change", updateInputMode);
-  }, []);
-  useEffect(() => {
-    if (!mobileChoices && state.status === "flying") input.current?.focus();
-  }, [mobileChoices, state.question.id, state.status]);
   function say(message: string) {
     setCaption(message);
     if (!muteRef.current && "speechSynthesis" in window) {
@@ -185,15 +168,10 @@ export default function FlightGame() {
       osc.connect(volume);
       osc.start();
     });
-    setAnswer("");
     setCaption("");
     lastAlarm.current = 0;
-    const useChoices = window.matchMedia("(max-width: 899px)").matches;
     publish({
-      ...initial(
-        selectedMode,
-        useChoices ? MOBILE_QUESTION_TIME_SECONDS : QUESTION_TIME_SECONDS,
-      ),
+      ...initial(selectedMode),
       status: "flying",
     });
   }
@@ -241,7 +219,6 @@ export default function FlightGame() {
           n.question.id,
         );
         n.time = n.questionTime;
-        setAnswer("");
       }
       if (n.altitude <= 0 || n.altitude >= 36999) {
         n.status = n.altitude <= 0 ? "lost" : "won";
@@ -293,17 +270,8 @@ export default function FlightGame() {
       n.feedback = `Correct answer: ${s.question.answers.join(" / ")}`;
       incorrectAnswerAlarm();
     }
-    n.question = pickQuestion(
-      s.mode,
-      levelForStreak(n.correct),
-      s.question.id,
-    );
+    n.question = pickQuestion(s.mode, levelForStreak(n.correct), s.question.id);
     publish(n);
-    setAnswer("");
-  }
-  function submit(e: FormEvent) {
-    e.preventDefault();
-    answerQuestion(answer);
   }
   function chooseAnswer(choice: string) {
     if (choiceLocked) return;
@@ -430,53 +398,30 @@ export default function FlightGame() {
               <span className="blank">?</span>
               {sentence[1]}
             </h1>
-            {mobileChoices ? (
-              <div
-                className="mobile-answer-panel"
-                role="group"
-                aria-label={`Choose the ${modeDetails.inputLabel.toLocaleLowerCase("en-GB")}`}
-              >
-                <span className="choice-instruction">
-                  SELECT ONE · ONE TAP CONFIRMS
-                </span>
-                <div className="choice-grid">
-                  {choices.map((choice, index) => (
-                    <button
-                      type="button"
-                      key={choice}
-                      disabled={choiceLocked}
-                      onClick={() => chooseAnswer(choice)}
-                    >
-                      <span aria-hidden="true">
-                        {String.fromCharCode(65 + index)}
-                      </span>
-                      {choice}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            ) : (
-              <form onSubmit={submit}>
-                <label htmlFor="answer">{modeDetails.inputLabel}</label>
-                <div className="answer-row">
-                  <input
-                    ref={input}
-                    id="answer"
-                    autoComplete="off"
-                    spellCheck={false}
-                    autoCapitalize="none"
-                    autoCorrect="off"
-                    inputMode="text"
-                    enterKeyHint="done"
-                    value={answer}
-                    onChange={(e) => setAnswer(e.target.value)}
-                  />
-                  <button>
-                    CONFIRM <span className="keyboard-hint">↵</span>
+            <div
+              className="answer-choice-panel"
+              role="group"
+              aria-label={`Choose the ${modeDetails.inputLabel.toLocaleLowerCase("en-GB")}`}
+            >
+              <span className="choice-instruction">
+                SELECT ONE · CLICK OR TAP TO CONFIRM
+              </span>
+              <div className="choice-grid">
+                {choices.map((choice, index) => (
+                  <button
+                    type="button"
+                    key={choice}
+                    disabled={choiceLocked}
+                    onClick={() => chooseAnswer(choice)}
+                  >
+                    <span aria-hidden="true">
+                      {String.fromCharCode(65 + index)}
+                    </span>
+                    {choice}
                   </button>
-                </div>
-              </form>
-            )}
+                ))}
+              </div>
+            </div>
             <p className="feedback" role="status">
               {state.feedback}
             </p>
@@ -535,7 +480,8 @@ export default function FlightGame() {
               : `START ${selectedModeDetails.title}`}
           </button>
           <small>
-            Modern-style synthetic callouts · Mobile and desktop · Sound can be muted
+            Modern-style synthetic callouts · Mobile and desktop · Sound can be
+            muted
           </small>
         </section>
       )}
