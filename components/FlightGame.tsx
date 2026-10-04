@@ -1,14 +1,20 @@
 "use client";
 import dynamic from "next/dynamic";
-import { FormEvent, useEffect, useRef, useState } from "react";
+import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import {
+  buildAnswerChoices,
   pickQuestion,
   levelForStreak,
   type ExerciseMode,
 } from "@/game/questions";
-import { isAcceptedAnswer, climbForAnswer } from "@/game/rules";
+import {
+  isAcceptedAnswer,
+  climbForAnswer,
+  QUESTION_TIME_SECONDS,
+} from "@/game/rules";
 import { crossedAltitudes, INCIDENTS, type Incident } from "@/game/flight";
 const FlightScene = dynamic(() => import("./FlightScene"), { ssr: false });
+const MOBILE_QUESTION_TIME_SECONDS = 8;
 const labels: Record<number, string> = {
   1000: "One Thousand",
   500: "Five Hundred",
@@ -39,7 +45,10 @@ const MODE_DETAILS: Record<
     inputLabel: "Missing phrasal verb",
   },
 };
-function initial(mode: ExerciseMode = "prepositions") {
+function initial(
+  mode: ExerciseMode = "prepositions",
+  questionTime = QUESTION_TIME_SECONDS,
+) {
   return {
     status: "idle",
     mode,
@@ -48,7 +57,8 @@ function initial(mode: ExerciseMode = "prepositions") {
     correct: 0,
     attempts: 0,
     streak: 0,
-    time: 10,
+    time: questionTime,
+    questionTime,
     elapsed: 0,
     nextEmergency: 25,
     incident: null as Incident | null,
@@ -65,6 +75,8 @@ export default function FlightGame() {
   const [state, setState] = useState<Flight>(() => initial("prepositions"));
   const live = useRef(state);
   const [answer, setAnswer] = useState("");
+  const [mobileChoices, setMobileChoices] = useState(false);
+  const [choiceLocked, setChoiceLocked] = useState(false);
   const [muted, setMuted] = useState(false);
   const [caption, setCaption] = useState("");
   const audio = useRef<AudioContext | null>(null);
@@ -93,6 +105,16 @@ export default function FlightGame() {
       viewport?.removeEventListener("resize", setGameHeight);
     };
   }, []);
+  useEffect(() => {
+    const media = window.matchMedia("(max-width: 899px)");
+    const updateInputMode = () => setMobileChoices(media.matches);
+    updateInputMode();
+    media.addEventListener("change", updateInputMode);
+    return () => media.removeEventListener("change", updateInputMode);
+  }, []);
+  useEffect(() => {
+    if (!mobileChoices && state.status === "flying") input.current?.focus();
+  }, [mobileChoices, state.question.id, state.status]);
   function say(message: string) {
     setCaption(message);
     if (!muteRef.current && "speechSynthesis" in window) {
@@ -166,8 +188,14 @@ export default function FlightGame() {
     setAnswer("");
     setCaption("");
     lastAlarm.current = 0;
-    publish({ ...initial(selectedMode), status: "flying" });
-    input.current?.focus();
+    const useChoices = window.matchMedia("(max-width: 899px)").matches;
+    publish({
+      ...initial(
+        selectedMode,
+        useChoices ? MOBILE_QUESTION_TIME_SECONDS : QUESTION_TIME_SECONDS,
+      ),
+      status: "flying",
+    });
   }
   useEffect(() => {
     const timer = window.setInterval(() => {
@@ -212,7 +240,7 @@ export default function FlightGame() {
           levelForStreak(n.correct),
           n.question.id,
         );
-        n.time = 10;
+        n.time = n.questionTime;
         setAnswer("");
       }
       if (n.altitude <= 0 || n.altitude >= 36999) {
@@ -239,12 +267,11 @@ export default function FlightGame() {
     };
     // The fixed clock reads current flight and mute state through refs.
   }, []);
-  function submit(e: FormEvent) {
-    e.preventDefault();
+  function answerQuestion(submittedAnswer: string) {
     const s = live.current;
-    if (s.status !== "flying" || !answer.trim()) return;
-    const accepted = isAcceptedAnswer(answer, s.question.answers);
-    const n = { ...s, attempts: s.attempts + 1, time: 10 };
+    if (s.status !== "flying" || !submittedAnswer.trim()) return;
+    const accepted = isAcceptedAnswer(submittedAnswer, s.question.answers);
+    const n = { ...s, attempts: s.attempts + 1, time: s.questionTime };
     if (accepted) {
       n.correct++;
       n.streak++;
@@ -273,7 +300,16 @@ export default function FlightGame() {
     );
     publish(n);
     setAnswer("");
-    input.current?.focus();
+  }
+  function submit(e: FormEvent) {
+    e.preventDefault();
+    answerQuestion(answer);
+  }
+  function chooseAnswer(choice: string) {
+    if (choiceLocked) return;
+    setChoiceLocked(true);
+    answerQuestion(choice);
+    window.setTimeout(() => setChoiceLocked(false), 180);
   }
   function pause() {
     const running = live.current.status === "flying";
@@ -289,6 +325,10 @@ export default function FlightGame() {
   const modeDetails = MODE_DETAILS[state.mode];
   const selectedModeDetails = MODE_DETAILS[selectedMode];
   const sentence = state.question.sentence.split("___");
+  const choices = useMemo(
+    () => buildAnswerChoices(state.mode, state.question),
+    [state.mode, state.question],
+  );
   const accuracy = state.attempts
     ? Math.round((state.correct / state.attempts) * 100)
     : 100;
@@ -379,34 +419,64 @@ export default function FlightGame() {
               </div>
             )}
             <div className="timer">
-              <i style={{ width: `${state.time * 10}%` }} />
+              <i
+                style={{
+                  width: `${Math.max(0, (state.time / state.questionTime) * 100)}%`,
+                }}
+              />
             </div>
             <h1>
               {sentence[0]}
               <span className="blank">?</span>
               {sentence[1]}
             </h1>
-            <form onSubmit={submit}>
-              <label htmlFor="answer">{modeDetails.inputLabel}</label>
-              <div className="answer-row">
-                <input
-                  autoFocus
-                  ref={input}
-                  id="answer"
-                  autoComplete="off"
-                  spellCheck={false}
-                  autoCapitalize="none"
-                  autoCorrect="off"
-                  inputMode="text"
-                  enterKeyHint="done"
-                  value={answer}
-                  onChange={(e) => setAnswer(e.target.value)}
-                />
-                <button>
-                  CONFIRM <span className="keyboard-hint">↵</span>
-                </button>
+            {mobileChoices ? (
+              <div
+                className="mobile-answer-panel"
+                role="group"
+                aria-label={`Choose the ${modeDetails.inputLabel.toLocaleLowerCase("en-GB")}`}
+              >
+                <span className="choice-instruction">
+                  SELECT ONE · ONE TAP CONFIRMS
+                </span>
+                <div className="choice-grid">
+                  {choices.map((choice, index) => (
+                    <button
+                      type="button"
+                      key={choice}
+                      disabled={choiceLocked}
+                      onClick={() => chooseAnswer(choice)}
+                    >
+                      <span aria-hidden="true">
+                        {String.fromCharCode(65 + index)}
+                      </span>
+                      {choice}
+                    </button>
+                  ))}
+                </div>
               </div>
-            </form>
+            ) : (
+              <form onSubmit={submit}>
+                <label htmlFor="answer">{modeDetails.inputLabel}</label>
+                <div className="answer-row">
+                  <input
+                    ref={input}
+                    id="answer"
+                    autoComplete="off"
+                    spellCheck={false}
+                    autoCapitalize="none"
+                    autoCorrect="off"
+                    inputMode="text"
+                    enterKeyHint="done"
+                    value={answer}
+                    onChange={(e) => setAnswer(e.target.value)}
+                  />
+                  <button>
+                    CONFIRM <span className="keyboard-hint">↵</span>
+                  </button>
+                </div>
+              </form>
+            )}
             <p className="feedback" role="status">
               {state.feedback}
             </p>

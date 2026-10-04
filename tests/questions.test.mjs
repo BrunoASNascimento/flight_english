@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import {
+  buildAnswerChoices,
   LEVELS,
   QUESTION_BANKS,
   QUESTIONS,
@@ -53,6 +54,35 @@ test("accepts every valid alternative answer", () => {
   assert.equal(isAcceptedAnswer("  due   to  ", ["because of", "due to"]), true);
   assert.equal(isAcceptedAnswer("SWITCH OFF", ["turn off", "switch off"]), true);
   assert.equal(isAcceptedAnswer("because", ["because of", "due to"]), false);
+});
+
+test("mobile choices contain every valid answer and difficult distractors", () => {
+  for (const [mode, bank] of Object.entries(QUESTION_BANKS)) {
+    for (const question of bank) {
+      const choices = buildAnswerChoices(mode, question, () => 0.42);
+      assert.equal(choices.length, 4);
+      assert.equal(new Set(choices.map((choice) => choice.toLowerCase())).size, 4);
+      for (const answer of question.answers) {
+        assert.ok(choices.includes(answer));
+      }
+      assert.ok(
+        choices.some(
+          (choice) => !isAcceptedAnswer(choice, question.answers),
+        ),
+      );
+    }
+  }
+
+  const deviceQuestion = PHRASAL_VERB_QUESTIONS.find(
+    (question) => question.id === "pv-a1-7",
+  );
+  const deviceChoices = buildAnswerChoices(
+    "phrasal-verbs",
+    deviceQuestion,
+    () => 0.42,
+  );
+  assert.ok(deviceChoices.includes("turn off"));
+  assert.ok(deviceChoices.includes("switch off"));
 });
 
 test("every question in both modes has a unique id and a usable answer", () => {
