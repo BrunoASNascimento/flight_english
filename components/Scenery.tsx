@@ -62,7 +62,9 @@ function cloudTexture() {
   ctx.fillRect(0, 0, 128, 128);
   return new CanvasTexture(canvas);
 }
-function Settlement() {
+function Settlement({ graphics }: { graphics: "medium" | "high" }) {
+  const trees = graphics === "high" ? 1050 : 420;
+  const pines = graphics === "high" ? 420 : 168;
   const buildings = useRef<InstancedMesh>(null);
   const roofs = useRef<InstancedMesh>(null);
   const windows = useRef<InstancedMesh>(null);
@@ -96,9 +98,7 @@ function Settlement() {
         buildings.current!.setColorAt(
           i,
           colour.set(
-            ["#b9b4a4", "#cbc3ad", "#aaa99e", "#c5b9a6", "#918e85"][
-              i % 5
-            ],
+            ["#b9b4a4", "#cbc3ad", "#aaa99e", "#c5b9a6", "#918e85"][i % 5],
           ),
         );
 
@@ -178,8 +178,8 @@ function Settlement() {
       }
     };
 
-    for (let i = 0; i < 1050; i++) placeTree(i, false);
-    for (let i = 0; i < 420; i++) placeTree(i, true);
+    for (let i = 0; i < trees; i++) placeTree(i, false);
+    for (let i = 0; i < pines; i++) placeTree(i, true);
 
     for (let i = 0; i < 72; i++) {
       const road = i % 4;
@@ -192,7 +192,9 @@ function Settlement() {
       cars.current!.setMatrixAt(i, dummy.matrix);
       cars.current!.setColorAt(
         i,
-        colour.set(["#8b3030", "#334f66", "#d0c8b7", "#454545", "#8a8268"][i % 5]),
+        colour.set(
+          ["#8b3030", "#334f66", "#d0c8b7", "#454545", "#8a8268"][i % 5],
+        ),
       );
     }
 
@@ -213,7 +215,7 @@ function Settlement() {
       if (ref.current!.instanceColor)
         ref.current!.instanceColor.needsUpdate = true;
     }
-  }, []);
+  }, [trees, pines]);
   return (
     <>
       <instancedMesh ref={buildings} args={[undefined, undefined, 196]}>
@@ -233,23 +235,23 @@ function Settlement() {
           roughness={0.25}
         />
       </instancedMesh>
-      <instancedMesh ref={deciduousLower} args={[undefined, undefined, 1050]}>
+      <instancedMesh ref={deciduousLower} args={[undefined, undefined, trees]}>
         <dodecahedronGeometry args={[1, 0]} />
         <meshStandardMaterial roughness={1} />
       </instancedMesh>
-      <instancedMesh ref={deciduousUpper} args={[undefined, undefined, 1050]}>
+      <instancedMesh ref={deciduousUpper} args={[undefined, undefined, trees]}>
         <dodecahedronGeometry args={[1, 1]} />
         <meshStandardMaterial roughness={1} />
       </instancedMesh>
-      <instancedMesh ref={conifers} args={[undefined, undefined, 420]}>
+      <instancedMesh ref={conifers} args={[undefined, undefined, pines]}>
         <coneGeometry args={[1, 1.7, 9, 3]} />
         <meshStandardMaterial roughness={1} />
       </instancedMesh>
-      <instancedMesh ref={deciduousTrunks} args={[undefined, undefined, 1050]}>
+      <instancedMesh ref={deciduousTrunks} args={[undefined, undefined, trees]}>
         <cylinderGeometry args={[1, 1.25, 1, 7]} />
         <meshStandardMaterial color="#57462f" roughness={1} />
       </instancedMesh>
-      <instancedMesh ref={coniferTrunks} args={[undefined, undefined, 420]}>
+      <instancedMesh ref={coniferTrunks} args={[undefined, undefined, pines]}>
         <cylinderGeometry args={[1, 1.25, 1, 7]} />
         <meshStandardMaterial color="#493c2d" roughness={1} />
       </instancedMesh>
@@ -283,9 +285,13 @@ function Settlement() {
 export default function Scenery({
   altitude,
   status,
+  graphics = "medium",
+  reducedMotion = false,
 }: {
   altitude: number;
   status: string;
+  graphics?: "low" | "medium" | "high";
+  reducedMotion?: boolean;
 }) {
   const ground = useRef<Group>(null),
     clouds = useRef<Group>(null);
@@ -301,18 +307,22 @@ export default function Scenery({
   );
   const puffs = useMemo(() => {
     const rand = random(909);
-    return Array.from({ length: 112 }, (_, i) => {
-      const cluster = Math.floor(i / 8);
-      return {
-        x: ((cluster % 5) - 2) * 70 + (rand() - 0.5) * 30,
-        y: 8 + rand() * 10,
-        z: -240 + Math.floor(cluster / 5) * 130 + (rand() - 0.5) * 32,
-        size: 24 + rand() * 25,
-      };
-    });
-  }, []);
+    return Array.from(
+      { length: graphics === "low" ? 16 : graphics === "medium" ? 56 : 112 },
+      (_, i) => {
+        const cluster = Math.floor(i / 8);
+        return {
+          x: ((cluster % 5) - 2) * 70 + (rand() - 0.5) * 30,
+          y: 8 + rand() * 10,
+          z: -240 + Math.floor(cluster / 5) * 130 + (rand() - 0.5) * 32,
+          size: 24 + rand() * 25,
+        };
+      },
+    );
+  }, [graphics]);
   useFrame((_, dt) => {
-    if (status === "flying") distance.current += Math.min(dt, 0.1) * 25;
+    if (status === "flying" && !reducedMotion)
+      distance.current += Math.min(dt, 0.1) * 25;
     if (ground.current) {
       ground.current.position.z = distance.current % 600;
       ground.current.position.y = -25 - altitude / 150;
@@ -331,7 +341,9 @@ export default function Scenery({
               <planeGeometry args={[600, 600]} />
               <meshStandardMaterial map={terrain} roughness={1} />
             </mesh>
-            <Settlement />
+            {graphics !== "low" && (
+              <Settlement key={graphics} graphics={graphics} />
+            )}
           </group>
         ))}
       </group>
