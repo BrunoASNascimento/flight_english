@@ -11,7 +11,10 @@ export function normaliseAnswer(value: string) {
   return value.trim().toLocaleLowerCase("en-GB").replace(/\s+/g, " ");
 }
 
-export function isAcceptedAnswer(answer: string, acceptedAnswers: readonly string[]) {
+export function isAcceptedAnswer(
+  answer: string,
+  acceptedAnswers: readonly string[],
+) {
   const normalisedAnswer = normaliseAnswer(answer);
   return acceptedAnswers.some(
     (acceptedAnswer) => normaliseAnswer(acceptedAnswer) === normalisedAnswer,

@@ -12,7 +12,10 @@ import { isAcceptedAnswer } from "../game/rules.ts";
 
 test("each level has twenty-six questions", () => {
   for (const level of LEVELS) {
-    assert.equal(QUESTIONS.filter((question) => question.level === level).length, 26);
+    assert.equal(
+      QUESTIONS.filter((question) => question.level === level).length,
+      26,
+    );
   }
 });
 
@@ -51,8 +54,14 @@ test("question selection stays inside the chosen exercise mode", () => {
 test("accepts every valid alternative answer", () => {
   assert.equal(isAcceptedAnswer("near", ["near", "by"]), true);
   assert.equal(isAcceptedAnswer("BY", ["near", "by"]), true);
-  assert.equal(isAcceptedAnswer("  due   to  ", ["because of", "due to"]), true);
-  assert.equal(isAcceptedAnswer("SWITCH OFF", ["turn off", "switch off"]), true);
+  assert.equal(
+    isAcceptedAnswer("  due   to  ", ["because of", "due to"]),
+    true,
+  );
+  assert.equal(
+    isAcceptedAnswer("SWITCH OFF", ["turn off", "switch off"]),
+    true,
+  );
   assert.equal(isAcceptedAnswer("because", ["because of", "due to"]), false);
 });
 
@@ -61,14 +70,15 @@ test("mobile choices contain every valid answer and difficult distractors", () =
     for (const question of bank) {
       const choices = buildAnswerChoices(mode, question, () => 0.42);
       assert.equal(choices.length, 4);
-      assert.equal(new Set(choices.map((choice) => choice.toLowerCase())).size, 4);
+      assert.equal(
+        new Set(choices.map((choice) => choice.toLowerCase())).size,
+        4,
+      );
       for (const answer of question.answers) {
         assert.ok(choices.includes(answer));
       }
       assert.ok(
-        choices.some(
-          (choice) => !isAcceptedAnswer(choice, question.answers),
-        ),
+        choices.some((choice) => !isAcceptedAnswer(choice, question.answers)),
       );
     }
   }
@@ -82,7 +92,8 @@ test("mobile choices contain every valid answer and difficult distractors", () =
     () => 0.42,
   );
   assert.ok(deviceChoices.includes("turn off"));
-  assert.ok(deviceChoices.includes("switch off"));
+  assert.ok(deviceChoices.includes("turn down"));
+  assert.ok(deviceChoices.includes("switch on"));
 });
 
 test("every question in both modes has a unique id and a usable answer", () => {

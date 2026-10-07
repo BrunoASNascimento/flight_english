@@ -2,7 +2,17 @@
   "name": "flight-english",
   "version": "0.1.0",
   "private": true,
-  "scripts": { "dev": "next dev", "build": "next build", "start": "next start", "lint": "eslint ." },
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "eslint .",
+    "test": "node --experimental-strip-types --test tests/*.test.mjs",
+    "typecheck": "tsc --noEmit",
+    "test:browser": "playwright test",
+    "lint:prettier:check": "prettier --check .",
+    "format": "prettier --write ."
+  },
   "dependencies": {
     "@react-three/drei": "^10.7.6",
     "@react-three/fiber": "^9.4.0",
@@ -12,7 +22,15 @@
     "three": "^0.180.0"
   },
   "devDependencies": {
-    "@types/node": "^24.0.0", "@types/react": "^19.0.0", "@types/react-dom": "^19.0.0",
-    "@types/three": "^0.180.0", "eslint": "^9.0.0", "eslint-config-next": "^16.0.0", "typescript": "^5.9.0"
-  }
+    "@playwright/test": "^1.63.0",
+    "@types/node": "^24.0.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "@types/three": "^0.180.0",
+    "eslint": "^9.0.0",
+    "eslint-config-next": "^16.0.0",
+    "prettier": "^3.9.9",
+    "typescript": "^5.9.0"
+  },
+  "type": "module"
 }

@@ -1,7 +1,7 @@
 "use client";
 import { Sky } from "@react-three/drei";
 import { Canvas, useFrame, useThree } from "@react-three/fiber";
-import { useEffect, useMemo, useRef } from "react";
+import { memo, useEffect, useMemo, useRef } from "react";
 import {
   Shape,
   Group,
@@ -16,6 +16,8 @@ type Props = {
   altitude: number;
   status: string;
   emergency?: boolean;
+  graphics?: "low" | "medium" | "high";
+  reducedMotion?: boolean;
 };
 // Local-space paint keeps camouflage attached to each aircraft surface.
 const paint: NonNullable<MeshStandardMaterial["onBeforeCompile"]> = (
@@ -112,10 +114,19 @@ function Body({
     </mesh>
   );
 }
-function Propeller({ x, status }: { x: number; status: string }) {
+function Propeller({
+  x,
+  status,
+  reducedMotion,
+}: {
+  x: number;
+  status: string;
+  reducedMotion?: boolean;
+}) {
   const ref = useRef<Group>(null);
   useFrame((_, dt) => {
-    if (ref.current && status === "flying") ref.current.rotation.z += dt * 45;
+    if (ref.current && status === "flying" && !reducedMotion)
+      ref.current.rotation.z += dt * 45;
   });
   return (
     <group position={[x, 0, -3.35]}>
@@ -154,10 +165,15 @@ function Propeller({ x, status }: { x: number; status: string }) {
     </group>
   );
 }
-function Aircraft({ pitch, emergency, status }: Props) {
+function Aircraft({
+  pitch,
+  emergency,
+  status,
+  reducedMotion,
+}: Omit<Props, "altitude">) {
   const ref = useRef<Group>(null);
   useFrame(({ clock }, dt) => {
-    if (ref.current && status !== "paused") {
+    if (ref.current && status === "flying" && !reducedMotion) {
       ref.current.rotation.x +=
         (pitch - ref.current.rotation.x) * Math.min(1, dt * 3);
       ref.current.rotation.z =
@@ -267,7 +283,7 @@ function Aircraft({ pitch, emergency, status }: Props) {
             color="#596957"
             scale={[1, 1, 1.12]}
           />
-          <Propeller x={x} status={status} />
+          <Propeller x={x} status={status} reducedMotion={reducedMotion} />
           <mesh position={[x, -0.61, -2.4]} scale={[0.3, 0.15, 0.6]}>
             <boxGeometry />
             <meshStandardMaterial color="#242b28" />
@@ -326,6 +342,7 @@ function Aircraft({ pitch, emergency, status }: Props) {
     </group>
   );
 }
+const MemoAircraft = memo(Aircraft);
 function CameraFraming() {
   const { camera, size } = useThree();
   useEffect(() => {
@@ -369,8 +386,17 @@ export default function FlightScene(props: Props) {
   return (
     <Canvas
       camera={{ position: [0.6, 6.5, 19], fov: 48 }}
-      dpr={compactDisplay ? [1, 1.15] : [1, 1.5]}
-      gl={{ antialias: !compactDisplay, powerPreference: "high-performance" }}
+      dpr={
+        props.graphics === "low"
+          ? 1
+          : compactDisplay || props.graphics === "medium"
+            ? [1, 1.15]
+            : [1, 1.5]
+      }
+      gl={{
+        antialias: !compactDisplay && props.graphics === "high",
+        powerPreference: "high-performance",
+      }}
       onCreated={({ camera }) => camera.lookAt(0, 0, -3)}
     >
       <CameraFraming />
@@ -378,8 +404,18 @@ export default function FlightScene(props: Props) {
       <ambientLight intensity={0.8} />
       <hemisphereLight args={["#c7e3f2", "#4e5036", 1.2]} />
       <directionalLight position={[-20, 30, -10]} intensity={2.5} />
-      <Aircraft {...props} />
-      <Scenery altitude={props.altitude} status={props.status} />
+      <MemoAircraft
+        pitch={props.pitch}
+        status={props.status}
+        emergency={props.emergency}
+        reducedMotion={props.reducedMotion}
+      />
+      <Scenery
+        altitude={props.altitude}
+        status={props.status}
+        graphics={props.graphics}
+        reducedMotion={props.reducedMotion}
+      />
       <fog attach="fog" args={["#b0c4cf", 130, 780]} />
     </Canvas>
   );
