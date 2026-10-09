@@ -1,4 +1,5 @@
 import {
+  MODE_DETAILS,
   QUESTION_BANKS,
   LEVELS,
   type Question,
@@ -45,8 +46,9 @@ export function questionPool(
     reviewIds.length
       ? reviewIds.includes(q.id)
       : q.level === level &&
-        (settings.content === "mixed" ||
-          (settings.content === "music") === !!q.source),
+        (MODE_DETAILS[settings.mode].shakespeare ||
+          settings.content === "mixed" ||
+          (settings.content === "music") === (q.source?.kind === "music")),
   );
 }
 export function nextLevel(level: Level, history: readonly Attempt[]): Level {

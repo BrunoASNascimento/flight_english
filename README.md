@@ -1,9 +1,10 @@
 # Flight English
 
 English practice aboard a procedural de Havilland DH.98 Mosquito B Mk XVI.
-Choose **prepositions** or **phrasal verbs**, with everyday and music-inspired
-collections. The game includes 260 questions across CEFR-inspired A1–C1 practice
-bands. These bands guide practice; they are not a certified proficiency assessment.
+Choose **prepositions** or **phrasal verbs** in modern English or the more difficult
+Shakespeare modes. The game includes 340 questions across CEFR-inspired A1–C1
+practice bands. These bands guide practice; they are not a certified proficiency
+assessment.
 
 ## Fly your way
 
@@ -13,7 +14,8 @@ bands. These bands guide practice; they are not a certified proficiency assessme
   answers earn climb, streak and speed bonuses; wrong answers and timeouts cost
   750 ft. The aircraft descends between answers. Question time grows with
   reading length and level, from about 10 to 22 seconds.
-- Choose a starting level and everyday, music-inspired or mixed questions.
+- Choose a starting level and everyday, music-inspired or mixed questions, or use
+  original Shakespeare excerpts with modern explanations and work attribution.
 - Every exercise shows the intended meaning to disambiguate context. Four
   curated options include every accepted alternative. Select any valid answer.
 - Progress to the next band requires at least 8/10 recent correct answers,
@@ -100,7 +102,8 @@ Survival timeouts, and soundtrack playback/pause/resume.
 - `game/engine.ts`: pure flight transitions, answer guards, timers and incidents.
 - `game/training.ts`: question queues, reading time, progression and review helpers.
 - `game/curriculum.ts`: editorial distractors and explanations by stable ID.
-- `game/questions.ts`, `game/phrasal-verbs.ts`: question banks and alternatives.
+- `game/questions.ts`, `game/phrasal-verbs.ts`, `game/shakespeare.ts`: question
+  banks, source attribution and accepted alternatives.
 - `game/audio.ts`: lifecycle, crossfade, ducking and resource disposal.
 - `game/storage.ts`: version validation and bounded session persistence.
 - `hooks/`: orchestration and browser progress subscriptions.

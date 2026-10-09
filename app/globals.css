@@ -239,7 +239,7 @@ summary:focus-visible {
   display: block;
   padding-right: 20px;
   font:
-    600 19px var(--font-display),
+    600 17px var(--font-display),
     sans-serif;
 }
 .mode-option small {
@@ -278,6 +278,29 @@ select {
   border: 1px solid #80938b;
   border-radius: 3px;
   font-size: 12px;
+}
+.collection-note {
+  display: flex;
+  min-height: 68px;
+  flex-direction: column;
+  justify-content: center;
+  padding: 8px 10px;
+  border-bottom: 2px solid var(--amber);
+  background: #071110a8;
+}
+.collection-note > span {
+  color: #e7eadf;
+  font-size: 12px;
+}
+.collection-note strong {
+  margin-top: 7px;
+  color: var(--amber);
+  font-size: 12px;
+}
+.collection-note small {
+  margin-top: 3px;
+  color: #c9cec6;
+  font-size: 10px;
 }
 .check-setting {
   display: flex;
@@ -410,6 +433,7 @@ input[type="range"] {
   background: var(--amber);
   transition: width 0.1s linear;
 }
+.question-source,
 .music-source {
   display: flex;
   justify-content: center;
@@ -419,11 +443,13 @@ input[type="range"] {
   line-height: 1.4;
   margin: 10px 0;
 }
+.question-source > span,
 .music-source > span {
   color: var(--amber);
   font-size: 8px;
   letter-spacing: 0.1em;
 }
+.question-source em,
 .music-source em {
   font-style: normal;
 }
