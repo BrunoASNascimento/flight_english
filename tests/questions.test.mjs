@@ -8,6 +8,10 @@ import {
   pickQuestion,
 } from "../game/questions.ts";
 import { PHRASAL_VERB_QUESTIONS } from "../game/phrasal-verbs.ts";
+import {
+  SHAKESPEARE_PHRASAL_VERB_QUESTIONS,
+  SHAKESPEARE_PREPOSITION_QUESTIONS,
+} from "../game/shakespeare.ts";
 import { isAcceptedAnswer } from "../game/rules.ts";
 
 test("each level has twenty-six questions", () => {
@@ -21,7 +25,9 @@ test("each level has twenty-six questions", () => {
 
 test("both modes include thirty attributed music-inspired questions", () => {
   for (const bank of [QUESTIONS, PHRASAL_VERB_QUESTIONS]) {
-    const musicQuestions = bank.filter((question) => question.source);
+    const musicQuestions = bank.filter(
+      (question) => question.source?.kind === "music",
+    );
     assert.equal(musicQuestions.length, 30);
     assert.equal(
       new Set(musicQuestions.map((question) => question.source.artist)).size,
@@ -47,8 +53,47 @@ test("each level has twenty-six phrasal-verb questions", () => {
 test("question selection stays inside the chosen exercise mode", () => {
   assert.equal(QUESTION_BANKS.prepositions, QUESTIONS);
   assert.equal(QUESTION_BANKS["phrasal-verbs"], PHRASAL_VERB_QUESTIONS);
+  assert.equal(
+    QUESTION_BANKS["shakespeare-prepositions"],
+    SHAKESPEARE_PREPOSITION_QUESTIONS,
+  );
+  assert.equal(
+    QUESTION_BANKS["shakespeare-phrasal-verbs"],
+    SHAKESPEARE_PHRASAL_VERB_QUESTIONS,
+  );
   assert.match(pickQuestion("prepositions", "A1").id, /^a1-/);
   assert.match(pickQuestion("phrasal-verbs", "C1").id, /^pv-c1-/);
+  assert.match(
+    pickQuestion("shakespeare-prepositions", "B1").id,
+    /^sh-prep-b1-/,
+  );
+  assert.match(
+    pickQuestion("shakespeare-phrasal-verbs", "B2").id,
+    /^sh-pv-b2-/,
+  );
+});
+
+test("Shakespeare modes have eight attributed questions at every level", () => {
+  for (const bank of [
+    SHAKESPEARE_PREPOSITION_QUESTIONS,
+    SHAKESPEARE_PHRASAL_VERB_QUESTIONS,
+  ]) {
+    for (const level of LEVELS)
+      assert.equal(
+        bank.filter((question) => question.level === level).length,
+        8,
+      );
+    for (const question of bank) {
+      assert.equal(question.source.kind, "shakespeare");
+      assert.ok(question.source.work.length > 0);
+    }
+  }
+  assert.equal(
+    new Set(
+      SHAKESPEARE_PHRASAL_VERB_QUESTIONS.map((question) => question.answers[0]),
+    ).size,
+    SHAKESPEARE_PHRASAL_VERB_QUESTIONS.length,
+  );
 });
 
 test("accepts every valid alternative answer", () => {
@@ -96,8 +141,8 @@ test("mobile choices contain every valid answer and difficult distractors", () =
   assert.ok(deviceChoices.includes("switch on"));
 });
 
-test("every question in both modes has a unique id and a usable answer", () => {
-  const allQuestions = [...QUESTIONS, ...PHRASAL_VERB_QUESTIONS];
+test("every question in every mode has a unique id and a usable answer", () => {
+  const allQuestions = Object.values(QUESTION_BANKS).flat();
   assert.equal(
     new Set(allQuestions.map((question) => question.id)).size,
     allQuestions.length,

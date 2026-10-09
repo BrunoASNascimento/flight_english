@@ -1,9 +1,22 @@
 import { CURRICULUM } from "./curriculum.ts";
 import { PHRASAL_VERB_QUESTIONS } from "./phrasal-verbs.ts";
+import {
+  SHAKESPEARE_PHRASAL_VERB_QUESTIONS,
+  SHAKESPEARE_PREPOSITION_QUESTIONS,
+} from "./shakespeare.ts";
 
 export type Level = "A1" | "A2" | "B1" | "B2" | "C1";
-export type ExerciseMode = "prepositions" | "phrasal-verbs";
-export type MusicSource = { artist: string; song: string };
+export type ExerciseMode =
+  | "prepositions"
+  | "phrasal-verbs"
+  | "shakespeare-prepositions"
+  | "shakespeare-phrasal-verbs";
+export type MusicSource = { kind: "music"; artist: string; song: string };
+export type ShakespeareSource = {
+  kind: "shakespeare";
+  work: string;
+};
+export type QuestionSource = MusicSource | ShakespeareSource;
 export type Question = {
   id: string;
   sentence: string;
@@ -12,9 +25,48 @@ export type Question = {
   explanation: string;
   level: Level;
   hint: string;
-  source?: MusicSource;
+  source?: QuestionSource;
 };
 export const LEVELS: Level[] = ["A1", "A2", "B1", "B2", "C1"];
+export const EXERCISE_MODES: ExerciseMode[] = [
+  "prepositions",
+  "phrasal-verbs",
+  "shakespeare-prepositions",
+  "shakespeare-phrasal-verbs",
+];
+export const MODE_DETAILS: Record<
+  ExerciseMode,
+  { title: string; label: string; description: string; shakespeare: boolean }
+> = {
+  prepositions: {
+    title: "PREPOSITIONS",
+    label: "PREPOSITION",
+    description: "Time, place and word combinations",
+    shakespeare: false,
+  },
+  "phrasal-verbs": {
+    title: "PHRASAL VERBS",
+    label: "PHRASAL VERB",
+    description: "Everyday expressions and their meanings",
+    shakespeare: false,
+  },
+  "shakespeare-prepositions": {
+    title: "SHAKESPEARE · PREPOSITIONS",
+    label: "SHAKESPEARE PREPOSITION",
+    description: "Advanced grammar in original dramatic lines",
+    shakespeare: true,
+  },
+  "shakespeare-phrasal-verbs": {
+    title: "SHAKESPEARE · PHRASAL VERBS",
+    label: "SHAKESPEARE PHRASAL VERB",
+    description: "Verb phrases from plays, with modern meanings",
+    shakespeare: true,
+  },
+};
+
+export function isExerciseMode(value: unknown): value is ExerciseMode {
+  return EXERCISE_MODES.includes(value as ExerciseMode);
+}
 
 const question = (
   id: string,
@@ -37,7 +89,7 @@ const musicQuestion = (
   answers,
   level,
   hint,
-  source: { artist, song },
+  source: { kind: "music", artist, song },
   ...CURRICULUM[id],
 });
 
@@ -967,6 +1019,8 @@ export const QUESTIONS: Question[] = [
 export const QUESTION_BANKS: Record<ExerciseMode, Question[]> = {
   prepositions: QUESTIONS,
   "phrasal-verbs": PHRASAL_VERB_QUESTIONS,
+  "shakespeare-prepositions": SHAKESPEARE_PREPOSITION_QUESTIONS,
+  "shakespeare-phrasal-verbs": SHAKESPEARE_PHRASAL_VERB_QUESTIONS,
 };
 
 export function levelForStreak(correctAnswers: number): Level {

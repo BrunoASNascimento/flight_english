@@ -1,5 +1,10 @@
 import { parseSettings, type Settings } from "./settings.ts";
-import { QUESTION_BANKS, LEVELS, type ExerciseMode } from "./questions.ts";
+import {
+  isExerciseMode,
+  QUESTION_BANKS,
+  LEVELS,
+  type ExerciseMode,
+} from "./questions.ts";
 import type { Attempt } from "./training.ts";
 
 export const STORAGE_KEY = "flight-english.v1";
@@ -30,7 +35,7 @@ export function parseProgress(value: unknown): Progress {
       typeof s.id !== "string" ||
       typeof s.date !== "string" ||
       !Number.isFinite(Date.parse(s.date)) ||
-      (s.mode !== "prepositions" && s.mode !== "phrasal-verbs") ||
+      !isExerciseMode(s.mode) ||
       (s.pace !== "practice" && s.pace !== "survival") ||
       !["won", "lost", "completed"].includes(s.outcome) ||
       !Array.isArray(s.history)

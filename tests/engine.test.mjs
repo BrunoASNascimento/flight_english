@@ -197,13 +197,24 @@ test("reading time grows with length and level; collections remain separate", ()
   );
   assert.ok(
     questionPool({ ...DEFAULT_SETTINGS, content: "music" }, "A1").every(
-      (q) => q.source,
+      (q) => q.source?.kind === "music",
     ),
   );
   assert.ok(
     questionPool({ ...DEFAULT_SETTINGS, content: "everyday" }, "A1").every(
       (q) => !q.source,
     ),
+  );
+  assert.equal(
+    questionPool(
+      {
+        ...DEFAULT_SETTINGS,
+        mode: "shakespeare-prepositions",
+        content: "music",
+      },
+      "A1",
+    ).length,
+    8,
   );
 });
 test("storage validates schema, bounds settings and prevents duplicate sessions", () => {

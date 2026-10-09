@@ -1,4 +1,9 @@
-import { LEVELS, type ExerciseMode, type Level } from "./questions.ts";
+import {
+  isExerciseMode,
+  LEVELS,
+  type ExerciseMode,
+  type Level,
+} from "./questions.ts";
 
 export type Settings = {
   mode: ExerciseMode;
@@ -32,8 +37,7 @@ export function parseSettings(value: unknown): Settings {
   const result = { ...DEFAULT_SETTINGS };
   if (!value || typeof value !== "object") return result;
   const raw = value as Record<string, unknown>;
-  if (raw.mode === "prepositions" || raw.mode === "phrasal-verbs")
-    result.mode = raw.mode;
+  if (isExerciseMode(raw.mode)) result.mode = raw.mode;
   if (raw.pace === "practice" || raw.pace === "survival")
     result.pace = raw.pace;
   if (LEVELS.includes(raw.level as Level)) result.level = raw.level as Level;

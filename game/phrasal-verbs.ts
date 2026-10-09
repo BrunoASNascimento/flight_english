@@ -23,7 +23,7 @@ const musicPhrasalVerb = (
   answers,
   level,
   hint,
-  source: { artist, song },
+  source: { kind: "music", artist, song },
   ...CURRICULUM[id],
 });
 

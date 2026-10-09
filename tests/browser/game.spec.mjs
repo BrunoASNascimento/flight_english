@@ -102,6 +102,24 @@ test("preferences survive reload and both grammar modes keep four choices", asyn
   await answer(page, true, "phrasal-verbs");
 });
 
+test("Shakespeare modes keep four difficult choices and identify the work", async ({
+  page,
+}) => {
+  await configure(page, {
+    mode: "shakespeare-phrasal-verbs",
+    level: "B1",
+    content: "music",
+  });
+  await expect(page.getByText("SHAKESPEARE · ADVANCED")).toBeVisible();
+  await page.getByRole("button", { name: "START PRACTICE FLIGHT" }).click();
+  await expect(page.locator(".choice-grid button")).toHaveCount(4);
+  await expect(page.locator(".question-meta")).toContainText(
+    "SHAKESPEARE PHRASAL VERB",
+  );
+  await expect(page.getByText("FROM SHAKESPEARE")).toBeVisible();
+  await answer(page, true, "shakespeare-phrasal-verbs");
+});
+
 test("survival hides music attribution until feedback and resumes after timeout", async ({
   page,
 }) => {

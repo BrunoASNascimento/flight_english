@@ -1,6 +1,7 @@
 import { memo } from "react";
 import type { Flight } from "@/game/engine";
 import type { Settings } from "@/game/settings";
+import { MODE_DETAILS } from "@/game/questions";
 
 function QuestionCard({
   flight,
@@ -25,10 +26,7 @@ function QuestionCard({
     >
       <div className="question-meta">
         <span>
-          {q.level} ·{" "}
-          {flight.settings.mode === "prepositions"
-            ? "PREPOSITION"
-            : "PHRASAL VERB"}
+          {q.level} · {MODE_DETAILS[flight.settings.mode].label}
         </span>
         <span>
           {flight.settings.pace === "practice"
@@ -42,10 +40,20 @@ function QuestionCard({
         Meaning to express: <strong>{q.hint}</strong>
       </p>
       {showSource && (
-        <p className="music-source">
-          <span>MUSIC INSPIRED</span>
-          <strong>{q.source!.artist}</strong>
-          <em>{q.source!.song}</em>
+        <p className="question-source music-source">
+          {q.source!.kind === "music" ? (
+            <>
+              <span>MUSIC INSPIRED</span>
+              <strong>{q.source!.artist}</strong>
+              <em>{q.source!.song}</em>
+            </>
+          ) : (
+            <>
+              <span>FROM SHAKESPEARE</span>
+              <strong>{q.source!.work}</strong>
+              <em>Original excerpt</em>
+            </>
+          )}
         </p>
       )}
       {flight.settings.pace === "survival" && !feedback && (

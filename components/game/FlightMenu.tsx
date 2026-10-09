@@ -1,4 +1,10 @@
-import { LEVELS, type ExerciseMode, type Level } from "@/game/questions";
+import {
+  EXERCISE_MODES,
+  LEVELS,
+  MODE_DETAILS,
+  type ExerciseMode,
+  type Level,
+} from "@/game/questions";
 import type { Settings } from "@/game/settings";
 import type { Session } from "@/game/storage";
 import SettingsPanel from "./SettingsPanel";
@@ -35,7 +41,7 @@ export default function FlightMenu({
         take on a survival mission.
       </p>
       <div className="mode-menu" role="group" aria-label="Exercise mode">
-        {(["prepositions", "phrasal-verbs"] as const).map((mode, i) => (
+        {EXERCISE_MODES.map((mode, i) => (
           <button
             key={mode}
             className={`mode-option ${settings.mode === mode ? "is-selected" : ""}`}
@@ -43,14 +49,8 @@ export default function FlightMenu({
             onClick={() => change("mode", mode)}
           >
             <span>0{i + 1}</span>
-            <strong>
-              {mode === "prepositions" ? "PREPOSITIONS" : "PHRASAL VERBS"}
-            </strong>
-            <small>
-              {mode === "prepositions"
-                ? "Time, place and word combinations"
-                : "Everyday expressions and their meanings"}
-            </small>
+            <strong>{MODE_DETAILS[mode].title}</strong>
+            <small>{MODE_DETAILS[mode].description}</small>
           </button>
         ))}
       </div>
@@ -76,19 +76,27 @@ export default function FlightMenu({
             ))}
           </select>
         </label>
-        <label>
-          Question collection
-          <select
-            value={settings.content}
-            onChange={(e) =>
-              change("content", e.target.value as Settings["content"])
-            }
-          >
-            <option value="mixed">Mixed collection</option>
-            <option value="everyday">Everyday English</option>
-            <option value="music">Music inspired</option>
-          </select>
-        </label>
+        {MODE_DETAILS[settings.mode].shakespeare ? (
+          <div className="collection-note" role="note">
+            <span>Question collection</span>
+            <strong>SHAKESPEARE · ADVANCED</strong>
+            <small>Original excerpts · modern explanations</small>
+          </div>
+        ) : (
+          <label>
+            Question collection
+            <select
+              value={settings.content}
+              onChange={(e) =>
+                change("content", e.target.value as Settings["content"])
+              }
+            >
+              <option value="mixed">Mixed collection</option>
+              <option value="everyday">Everyday English</option>
+              <option value="music">Music inspired</option>
+            </select>
+          </label>
+        )}
         <label className="check-setting">
           <input
             type="checkbox"
