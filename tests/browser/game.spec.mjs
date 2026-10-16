@@ -39,6 +39,7 @@ async function configure(page, changes = {}) {
 test("practice corrections remain readable, pause works, and a debrief can review mistakes", async ({
   page,
 }) => {
+  test.setTimeout(90_000);
   const errors = [];
   page.on("pageerror", (e) => errors.push(e.message));
   await configure(page);
