@@ -87,10 +87,7 @@ function terrainTexture() {
       const diagStep = 9;
       for (let d = -fh; d < fw; d += diagStep) {
         ctx.moveTo(Math.max(fx, fx + d), Math.max(fy, fy - d));
-        ctx.lineTo(
-          Math.min(fx + fw, fx + d + fh),
-          Math.min(fy + fh, fy + fh),
-        );
+        ctx.lineTo(Math.min(fx + fw, fx + d + fh), Math.min(fy + fh, fy + fh));
       }
       ctx.stroke();
     } else {
@@ -174,9 +171,7 @@ function terrainTexture() {
   const subRand = random(404);
   for (let s = 0; s < 48; s++) {
     const isWest = s < 24;
-    const sx = isWest
-      ? 535 + subRand() * 65
-      : 1025 + subRand() * 65;
+    const sx = isWest ? 535 + subRand() * 65 : 1025 + subRand() * 65;
     const sy = 750 + subRand() * 490;
 
     // Garden plot
@@ -234,9 +229,7 @@ function terrainTexture() {
       ctx.stroke();
 
       // Parked miniature cars
-      ctx.fillStyle = ["#8a2b2b", "#27486e", "#ded9cf", "#2b2b2b"][
-        (c + r) % 4
-      ];
+      ctx.fillStyle = ["#8a2b2b", "#27486e", "#ded9cf", "#2b2b2b"][(c + r) % 4];
       ctx.fillRect(plx + 4, ply + 6, 6, 4);
       ctx.fillRect(plx + 28, ply + 18, 6, 4);
     }
@@ -694,6 +687,8 @@ function Settlement({
 
   // Vehicle simulation list
   const vehiclesRef = useRef<VehicleState[]>([]);
+  const trafficInitialised = useRef(false);
+  const vehicleDummy = useMemo(() => new Object3D(), []);
 
   // Road geometry coordinates
   const xRoads = useMemo(() => [-122, -84.5, -47, -9.5], []);
@@ -768,6 +763,7 @@ function Settlement({
         sidewalksMesh.current.setColorAt(swIndex, colour.set("#72777a"));
         swIndex++;
       }
+      sidewalksMesh.current.count = swIndex;
     }
 
     // 2. Buildings, Rooftops, Windows, Spires & Beacons
@@ -862,8 +858,7 @@ function Settlement({
 
         const isDowntownCore = c === 1 && r === 1;
         const isMidtown =
-          (c === 1 && (r === 0 || r === 2)) ||
-          (r === 1 && c === 0);
+          (c === 1 && (r === 0 || r === 2)) || (r === 1 && c === 0);
 
         const bRows = isDowntownCore ? 2 : 3;
         const bCols = isDowntownCore ? 2 : 3;
@@ -975,7 +970,11 @@ function Settlement({
                 roofsHvacMesh.current.setMatrixAt(hvacIndex++, dummy.matrix);
               }
 
-              if (height >= 40 && spiresMesh.current && spireIndex < totalSpires) {
+              if (
+                height >= 40 &&
+                spiresMesh.current &&
+                spireIndex < totalSpires
+              ) {
                 const spireHeight = 12 + rand() * 4;
                 dummy.position.set(bx, height + spireHeight / 2, bz);
                 dummy.scale.set(0.18, spireHeight, 0.18);
@@ -993,7 +992,10 @@ function Settlement({
                 spireIndex++;
               }
             } else if (bType === "brick" && height > 14) {
-              if (roofsWaterTowerMesh.current && waterTowerIndex < totalWaterTowers) {
+              if (
+                roofsWaterTowerMesh.current &&
+                waterTowerIndex < totalWaterTowers
+              ) {
                 dummy.position.set(bx, height + 1.8, bz);
                 dummy.scale.set(1.4, 2.8, 1.4);
                 dummy.rotation.set(0, 0, 0);
@@ -1024,6 +1026,17 @@ function Settlement({
       }
     }
 
+    if (skyscrapersMesh.current) skyscrapersMesh.current.count = skyIndex;
+    if (buildingsMesh.current) buildingsMesh.current.count = bIndex;
+    if (windowsMesh.current) windowsMesh.current.count = wIndex;
+    if (roofsPitchedMesh.current) roofsPitchedMesh.current.count = roofIndex;
+    if (roofsHvacMesh.current) roofsHvacMesh.current.count = hvacIndex;
+    if (roofsWaterTowerMesh.current)
+      roofsWaterTowerMesh.current.count = waterTowerIndex;
+    if (spiresMesh.current) spiresMesh.current.count = spireIndex;
+    if (beaconsMesh.current) beaconsMesh.current.count = spireIndex;
+    if (parkTreesMesh.current) parkTreesMesh.current.count = parkTreeIndex;
+
     // 3. Streetlights
     if (streetlightsMesh.current) {
       let slIndex = 0;
@@ -1043,6 +1056,7 @@ function Settlement({
           streetlightsMesh.current.setMatrixAt(slIndex++, dummy.matrix);
         }
       }
+      streetlightsMesh.current.count = slIndex;
     }
 
     // 4. Intersections Crosswalks & Road Centerline Dashes
@@ -1076,6 +1090,7 @@ function Settlement({
           crosswalksMesh.current.setMatrixAt(cwIndex++, dummy.matrix);
         }
       }
+      crosswalksMesh.current.count = cwIndex;
     }
 
     if (roadLinesMesh.current) {
@@ -1092,6 +1107,7 @@ function Settlement({
           roadLinesMesh.current.setMatrixAt(rlIndex++, dummy.matrix);
         }
       }
+      roadLinesMesh.current.count = rlIndex;
     }
 
     // 5. River Bridge Structure & Marina
@@ -1106,6 +1122,7 @@ function Settlement({
         dummy.updateMatrix();
         bridgePiersMesh.current!.setMatrixAt(i, dummy.matrix);
       });
+      bridgePiersMesh.current.count = Math.min(pierXs.length, totalBridgePiers);
     }
 
     if (bridgePylonsMesh.current) {
@@ -1124,6 +1141,10 @@ function Settlement({
         dummy.updateMatrix();
         bridgePylonsMesh.current!.setMatrixAt(i * 2 + 1, dummy.matrix);
       });
+      bridgePylonsMesh.current.count = Math.min(
+        towerXs.length * 2,
+        totalBridgePylons,
+      );
     }
 
     if (marinaBoatsMesh.current) {
@@ -1261,6 +1282,7 @@ function Settlement({
       });
     }
     vehiclesRef.current = vList;
+    trafficInitialised.current = false;
 
     if (carsBodyMesh.current) {
       vList.forEach((veh, idx) => {
@@ -1315,9 +1337,10 @@ function Settlement({
     const vehicles = vehiclesRef.current;
     if (!vehicles.length || !carsBodyMesh.current) return;
 
-    const dummy = new Object3D();
     const effectiveDt =
       status === "flying" && !reducedMotion ? Math.min(dt, 0.05) : 0;
+    if (trafficInitialised.current && effectiveDt === 0) return;
+    trafficInitialised.current = true;
 
     for (let i = 0; i < vehicles.length; i++) {
       const v = vehicles[i];
@@ -1342,38 +1365,50 @@ function Settlement({
             ? -Math.PI / 2
             : Math.PI / 2;
 
-      dummy.position.set(posX, yPos, posZ);
-      dummy.rotation.set(0, rotY, 0);
-      dummy.scale.set(v.width, v.height, v.length);
-      dummy.updateMatrix();
-      carsBodyMesh.current.setMatrixAt(i, dummy.matrix);
+      vehicleDummy.position.set(posX, yPos, posZ);
+      vehicleDummy.rotation.set(0, rotY, 0);
+      vehicleDummy.scale.set(v.width, v.height, v.length);
+      vehicleDummy.updateMatrix();
+      carsBodyMesh.current.setMatrixAt(i, vehicleDummy.matrix);
 
       if (carsCabinMesh.current) {
-        dummy.position.set(posX, yPos + v.height * 0.45, posZ);
-        dummy.rotation.set(0, rotY, 0);
-        dummy.scale.set(v.width * 0.88, v.height * 0.65, v.length * 0.55);
-        dummy.updateMatrix();
-        carsCabinMesh.current.setMatrixAt(i, dummy.matrix);
+        vehicleDummy.position.set(posX, yPos + v.height * 0.45, posZ);
+        vehicleDummy.rotation.set(0, rotY, 0);
+        vehicleDummy.scale.set(
+          v.width * 0.88,
+          v.height * 0.65,
+          v.length * 0.55,
+        );
+        vehicleDummy.updateMatrix();
+        carsCabinMesh.current.setMatrixAt(i, vehicleDummy.matrix);
       }
 
       if (carsHeadlightsMesh.current) {
         const fwdX = v.axis === "x" ? v.dir * (v.length / 2 + 0.05) : 0;
         const fwdZ = v.axis === "z" ? v.dir * (v.length / 2 + 0.05) : 0;
-        dummy.position.set(posX + fwdX, yPos - v.height * 0.1, posZ + fwdZ);
-        dummy.rotation.set(0, rotY, 0);
-        dummy.scale.set(v.width * 0.75, 0.12, 0.06);
-        dummy.updateMatrix();
-        carsHeadlightsMesh.current.setMatrixAt(i, dummy.matrix);
+        vehicleDummy.position.set(
+          posX + fwdX,
+          yPos - v.height * 0.1,
+          posZ + fwdZ,
+        );
+        vehicleDummy.rotation.set(0, rotY, 0);
+        vehicleDummy.scale.set(v.width * 0.75, 0.12, 0.06);
+        vehicleDummy.updateMatrix();
+        carsHeadlightsMesh.current.setMatrixAt(i, vehicleDummy.matrix);
       }
 
       if (carsTaillightsMesh.current) {
         const bwdX = v.axis === "x" ? -v.dir * (v.length / 2 + 0.05) : 0;
         const bwdZ = v.axis === "z" ? -v.dir * (v.length / 2 + 0.05) : 0;
-        dummy.position.set(posX + bwdX, yPos - v.height * 0.1, posZ + bwdZ);
-        dummy.rotation.set(0, rotY, 0);
-        dummy.scale.set(v.width * 0.75, 0.1, 0.06);
-        dummy.updateMatrix();
-        carsTaillightsMesh.current.setMatrixAt(i, dummy.matrix);
+        vehicleDummy.position.set(
+          posX + bwdX,
+          yPos - v.height * 0.1,
+          posZ + bwdZ,
+        );
+        vehicleDummy.rotation.set(0, rotY, 0);
+        vehicleDummy.scale.set(v.width * 0.75, 0.1, 0.06);
+        vehicleDummy.updateMatrix();
+        carsTaillightsMesh.current.setMatrixAt(i, vehicleDummy.matrix);
       }
     }
 
@@ -1394,10 +1429,7 @@ function Settlement({
         args={[undefined, undefined, totalSidewalks]}
       >
         <boxGeometry />
-        <meshStandardMaterial
-          map={sidewalkMap}
-          roughness={0.82}
-        />
+        <meshStandardMaterial map={sidewalkMap} roughness={0.82} />
       </instancedMesh>
 
       {/* Modern High-Rise Skyscraper Glass Towers */}
@@ -1456,11 +1488,7 @@ function Settlement({
         args={[undefined, undefined, totalHvacs]}
       >
         <boxGeometry />
-        <meshStandardMaterial
-          map={roofMap}
-          color="#575c5e"
-          roughness={0.8}
-        />
+        <meshStandardMaterial map={roofMap} color="#575c5e" roughness={0.8} />
       </instancedMesh>
 
       {/* Rooftop Water Towers on Stilts */}
@@ -1473,7 +1501,10 @@ function Settlement({
       </instancedMesh>
 
       {/* Skyscraper Communication Spires */}
-      <instancedMesh ref={spiresMesh} args={[undefined, undefined, totalSpires]}>
+      <instancedMesh
+        ref={spiresMesh}
+        args={[undefined, undefined, totalSpires]}
+      >
         <cylinderGeometry args={[0.15, 0.45, 1, 6]} />
         <meshStandardMaterial color="#b5bac2" metalness={0.8} roughness={0.2} />
       </instancedMesh>
